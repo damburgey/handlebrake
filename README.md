@@ -109,7 +109,7 @@ Remove Source Files - After each successful encode
 * By Default the **-Quality** is set to **"27"**, which specifies a quality level of 27
 
 **Audio Encoding Parameters**
-* By Default the **-AEncodert** is set to **"copy"**, which specifies to attempt to bring over the audio tracks as-is
+* By Default the **-AEncoder** is set to **"copy"**, which specifies to attempt to bring over the audio tracks as-is
 * By Default the **-ATracks** is set to **"1,2,3,4,5,6,7,8,9,10,11,12"**, which specifies which audio tracks to bring over
 * By Default the **-ACmask** is set to **"aac,ac3,eac3,truehd,dts,dtshd,mp2,mp3,flac,opus"**, which specifies types audio tracks to bring over as-is
 * By Default the **-AFailBack** is set to **"av_aac"**, which specifies the audio codec to fail back to, if the copy passthrough doesnt work for any reason
