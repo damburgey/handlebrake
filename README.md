@@ -6,8 +6,7 @@ A PowerShell script to help automate and validate HandBrakeCLI batch encoding jo
 
 I've been searching for, and found a lot of other people also looking for, and struggling with using HandBrakeCLI to convert 1080p H264 content in to H265.
 Not only on the video conversion, but with audio passthrough _(i.e. don't re-encode audio tracks)_
-And include any subtitle tracks if applicable. _(SRT to SSA conversion required)_.
-
+And include any subtitle tracks if applicable.
 **My goals were to:**
 
 * Be able to point it at any individual file, or root folder containing multiple video files, but also be able to filter out for specific file extensions, and ignore certain files with specific things in their name.
