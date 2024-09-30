@@ -21,7 +21,7 @@ And include any subtitle tracks if applicable.
 * Remove the source file (if all validations are a success, and I provide the -RemoveSource flag)
 * After the first, and each susbequent job, measure the average encode duration, and use that along with the # of remaining jobs in queue to estimate time remaining for all jobs
 
-Note:  Because HandBrakeCLI is 'noisy' and emits progress to stdout and log info to stderr.  All jobs run in a background, and are logged and monitored for success.  This allowed the main script session to be much cleaner and provide working progress bars.
+**Note:**  Because HandBrakeCLI is 'noisy' and emits progress to stdout and log info to stderr.  All jobs run in a background, and are logged and monitored for success.  This allowed the main script session to be much cleaner and provide working progress bars.
 
 
 This allowed the main Progress Bar 
