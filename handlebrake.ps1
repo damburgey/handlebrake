@@ -362,7 +362,6 @@ foreach ($file in $files) {
         Exit 1
     }
 
-
     # Validate if duration matches source
     if ($SourceDuration -eq $TargetDuration){
         $VideoDurationIsValid = $true
