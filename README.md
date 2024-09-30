@@ -19,6 +19,12 @@ And include any subtitle tracks if applicable.
 * Scan the target video files for each job, and gather the metadata
 * Compare the Source & Target metadata for validation on Video Stream, Duration, Auto & Subtitle track counts.
 * Remove the source file (if all validations are a success, and I provide the -RemoveSource flag)
+* After the first, and each susbequent job, measure the average encode duration, and use that along with the # of remaining jobs in queue to estimate time remaining for all jobs
+
+Note:  Because HandBrakeCLI is 'noisy' and emits progress to stdout and log info to stderr.  All jobs run in a background, and are logged and monitored for success.  This allowed the main script session to be much cleaner and provide working progress bars.
+
+
+This allowed the main Progress Bar 
 
 ## Getting Started
 Please read the Default Configuration and understand the assumptions before you accept the values for your use case
