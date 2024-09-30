@@ -70,7 +70,7 @@ Verbose Mode - Adds additional console output around Source & Target meta-data, 
 ```
 .\handlebrake.ps1 -Source <Source Path> -Verbose
 ```
-Remove Source Files - After each successful encode
+Remove Source Files - After each successful encode (Only if the validation is 100% success)
 ```
 .\handlebrake.ps1 -Source <Source Path> -RemoveSource
 ```
