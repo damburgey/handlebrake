@@ -26,7 +26,7 @@ Please read the Default Configuration and understand the assumptions before you 
 ### Dependencies
 
 * Requires PowerShell _(Tested on Windows with PowerShell v5.1 and 7.4.5)_
-* Requires PowerShell to be able to unsigned scripts.  _(Set-ExecutionPolicy Unrestricted -Force)_
+* Requires PowerShell to be able to run 'unsigned' scripts such as this one.  _(Set-ExecutionPolicy Unrestricted -Force)_
 * Requires HandBrakeCLI _(Tested on v1.8.2 - latest at the time of creation)_
 * https://handbrake.fr/rotation.php?file=HandBrakeCLI-1.8.2-win-x86_64.zip
 
