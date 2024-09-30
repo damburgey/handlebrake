@@ -1,6 +1,6 @@
 # handlebrake
 
-A PowerShell script to help automate and validate HandBrakeCLI batch encoding jobs
+A PowerShell script to 'handle' the automation and validation of HandBrakeCLI batch encoding jobs
 
 ## Description
 
