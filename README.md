@@ -131,7 +131,7 @@ Remove Source Files - After each successful encode _(Only if the validation is 1
 * The Log files will be in the same folder you ran the script from (assuming you didnt redirect the log output folder)
 * The Log files are time stamped (from the start of the job itself) for each Job_#
 * There are (3) log files for each job, the source scan, the encode job itself, and the target scan
-* To get the Job's themselves for manual investigation
+* To get the background PowerShell Job's themselves for manual investigation
 ```
 Get-Jobs | Format-Table -Auto -Wrap
 Get-Job[0] | Format-List
