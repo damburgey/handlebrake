@@ -23,9 +23,6 @@ And include any subtitle tracks if applicable.
 
 **Note:**  Because HandBrakeCLI is 'noisy' and emits progress to stdout and log info to stderr.  All jobs run in a background, and are logged and monitored for success.  This allowed the main script session to be much cleaner and provide working progress bars.
 
-
-This allowed the main Progress Bar 
-
 ## Getting Started
 Please read the Default Configuration and understand the assumptions before you accept the values for your use case
 
