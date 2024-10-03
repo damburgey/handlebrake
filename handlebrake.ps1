@@ -170,6 +170,11 @@ foreach ($file in $files) {
             $inSubtitleTracks = $false
         }
     }
+
+    # Get the original source file size
+    $SourceFileSizeBytes = (Get-Item -LiteralPath $file.FullName).Length
+    $SourceFileSize = $SourceFileSizeBytes -as [string] -replace '(\d)(?=(\d{3})+$)', '$1,'
+
     
     # Output results
     if ($SourceVideoValid -ige 1){Write-Verbose "Source Video Valid: Yes"}
@@ -180,6 +185,7 @@ foreach ($file in $files) {
     Write-Verbose "Source Audio Tracks: $($SourceaudioTracks -join ', ')"
     Write-Verbose "Source Subtitle Track Count: $($SourcesubtitleTracks.Count)"
     Write-Verbose "Source Subtitle Tracks: $($SourcesubtitleTracks -join ', ')"
+    Write-Verbose "Source Video Size on Disk: $($SourceFileSize)"
 
     # Validate Video Stream is good, exit the script if not.
     if ($SourceVideoValid  -ige 1){
@@ -341,6 +347,10 @@ foreach ($file in $files) {
         }
     }
     
+    # Get the file size of the target file
+    $TargetFileSizeBytes = (Get-Item -LiteralPath $outputFileName).Length
+    $TargetFileSize = $TargetFileSizeBytes -as [string] -replace '(\d)(?=(\d{3})+$)', '$1,'
+
     # Output results
     if ($TargetVideoValid -ige 1){Write-Verbose "Target Video Valid: Yes"}
     else {Write-Verbose "Target Video Valid: No"}
@@ -350,6 +360,7 @@ foreach ($file in $files) {
     Write-Verbose "Target Audio Tracks: $($TargetaudioTracks -join ', ')"
     Write-Verbose "Target Subtitle Track Count: $($TargetsubtitleTracks.Count)"
     Write-Verbose "Target Subtitle Tracks: $($TargetsubtitleTracks -join ', ')"
+    Write-Verbose "Target Video Size on Disk: $($TargetFileSize)"
 
     # Validate Target Video Stream is Good
     if ($TargetVideoValid -ige 1){
@@ -381,10 +392,13 @@ foreach ($file in $files) {
     }
 
     # If all validations are successful, lets call it successful
+    $CompressionRatio = [math]::Round((($SourceFileSizeBytes - $TargetFileSizeBytes) / $SourceFileSizeBytes) * 100)
+    #$CompressionRatio = (($VideoSizeDifference / $SourceFileSize) * 100)
     if ($SourceVideoStreamIsValid -eq $true -and $VideoDurationIsValid -eq $true -and $AudioTracksIsValid -eq $true -and $SubtitleTracksIsValid -eq $true){
         $EncodedVideoIsValid = $True
         Write-Host -ForegroundColor Green "Validation of Target File --> $outputFileName"
         Write-Host -ForegroundColor Green "Was Succesful! Video stream is valid, Durations match, and Audio & Subtitle tracks match!"
+        Write-Host -ForegroundColor Green "Target file has been compressed: $CompressionRatio %"
     }
 
     # Close out the Target Validation progress bar
