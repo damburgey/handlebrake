@@ -21,7 +21,7 @@
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("jf")][string] $JobFolder = $PSScriptRoot+"\", # Folder MUST exist, defaults to where ever the script is ran from
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("min")][int] $MinCompression="10", # 
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("max")][int] $MaxCompression="70", #
-    [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("minb")][int] $MinBitrate="600", # 
+    [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("minb")][int] $MinBitrate="700", # 
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("maxb")][int] $MaxBitrate="99999", #
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("us")][switch] $UpdateSonarr, # When $true, this will trigger Sonarr to refresh the TV Series
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("sbu")][string] $sonarrBaseUrl = "http://localhost:8989/api/v3",  # Adjust the URL if necessary
@@ -178,26 +178,28 @@ foreach ($file in $files) {
     }
     
     # Parse the Source Log Validation File
-    Get-Content $SourceLogValidationFile | ForEach-Object {
+    Get-Content $SourceLogValidationFile -Raw | ForEach-Object {
 
         # See if this file is already HEVC, and skip it if so
         if ($_ -match 'hevc' -or $_ -match 'vp9' -or $_ -match 'x265' -or $_ -match 'h265'){
             Write-Host -ForegroundColor Yellow "Skipping: $($file.Name)"    
             Write-Host -ForegroundColor Yellow "Because it is already HEVC/x265/VP9"
-            Break # Exit the loop on this source file
+            Write-Progress -Id 1 -ParentId 0 -Activity 'Validation Process' -Completed
+            Continue # Exit the loop on this source file
         }
 
         # Check the bitrate of this file to make sure its within our min/max values
-        if ($_ -match 'Duration:.*bitrate:\s*(\d+)\s*kb/s') {
+        if ($_ -match "bitrate:\s*(\d+)\s*kb/s") {
             # Store the captured value
-            $SourceVideoBitrate = $matches[1]
+            [int]$SourceVideoBitrate = $matches[1]
         }
 
         # Skip this file if it's not within our desired bitrate for encoding
         if ($SourceVideoBitrate -le $MinBitrate){
             Write-Host -ForegroundColor Yellow "Skipping: $($file.Name)"    
             Write-Host -ForegroundColor Yellow "Because it's Bitrate of: $SourceVideoBitrate is below the requested minimum value of $MinBitrate"
-            Break # Exit the loop on this source file
+            Write-Progress -Id 1 -ParentId 0 -Activity 'Validation Process' -Completed
+            Continue # Exit the loop on this source file
         }
 
 
