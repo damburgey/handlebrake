@@ -64,6 +64,8 @@ Where "Source Path" is either a single file, or a folder containing files you wi
 ```
 .\handlebrake.ps1 -Source "Z:\Videos\Home Movies\2023\"
 .\handlebrake.ps1 -Source "Z:\Videos\Home Movies\2023\01_01_2023.mkv"
+.\handlebrake.ps1 -Source "Z:\Videos\TV\TV Show\"
+.\handlebrake.ps1 -Source "Z:\Videos\TV\TV Show\Season 01\"
 ```
 
 ## 
