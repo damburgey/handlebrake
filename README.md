@@ -171,6 +171,7 @@ damburgey (aka StorageGuru)
 * 0.5
 	* Added integration with Sonarr
 	* Upon successful encode, it will detect the SeriesID and push the Refresh/Scan & Rename via API
+	* Note if your Sonarr is connected to Plex/Jellyfin, it should also push the API based on rename action
 
 * 0.4
 	* Added Min and Max Compression value parameters
