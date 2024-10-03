@@ -158,6 +158,10 @@ damburgey (aka StorageGuru)
 
 ## Version History
 
+* 0.7
+	* Added $MinBitrate and $MaxBitrate
+	* Will skip passed the video if the detected Bitrate isn't within our desired parameters
+
 * 0.6
 	* Added video detection on source file for x265, h265, hevc, vp9
 	* Will skip passed the video and continue the queue

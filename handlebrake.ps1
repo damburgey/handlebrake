@@ -21,12 +21,14 @@
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("jf")][string] $JobFolder = $PSScriptRoot+"\", # Folder MUST exist, defaults to where ever the script is ran from
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("min")][int] $MinCompression="10", # 
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("max")][int] $MaxCompression="70", #
+    [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("minb")][int] $MinBitrate="600", # 
+    [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("maxb")][int] $MaxBitrate="99999", #
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("us")][switch] $UpdateSonarr, # When $true, this will trigger Sonarr to refresh the TV Series
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("sbu")][string] $sonarrBaseUrl = "http://localhost:8989/api/v3",  # Adjust the URL if necessary
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("sak")][string] $SonarrApiKey = ""  # Replace with your actual API key
 )
 
-# Version 0.6
+# Version 0.7
 
 # Reset Global Variables
 $c=0
@@ -185,6 +187,20 @@ foreach ($file in $files) {
             Break # Exit the loop on this source file
         }
 
+        # Check the bitrate of this file to make sure its within our min/max values
+        if ($_ -match 'Duration:.*bitrate:\s*(\d+)\s*kb/s') {
+            # Store the captured value
+            $SourceVideoBitrate = $matches[1]
+        }
+
+        # Skip this file if it's not within our desired bitrate for encoding
+        if ($SourceVideoBitrate -le $MinBitrate){
+            Write-Host -ForegroundColor Yellow "Skipping: $($file.Name)"    
+            Write-Host -ForegroundColor Yellow "Because it's Bitrate of: $SourceVideoBitrate is below the requested minimum value of $MinBitrate"
+            Break # Exit the loop on this source file
+        }
+
+
         # Match the line containing "libhb: scan thread" and capture the number of valid titles
         if ($_ -match 'libhb:\s*scan thread found\s*(\d+)\s+valid title\(s\)') {
             # Store the captured value
@@ -236,6 +252,7 @@ foreach ($file in $files) {
     # Output results
     if ($SourceVideoValid -ige 1){Write-Verbose "Source Video Valid: Yes"}
     else {Write-Verbose "Source Video Valid: No"}
+    Write-Verbose "Source Video Bitrate: $($SourceVideoBitrate)"
     Write-Verbose "Source Video Resolution: $($SourceSizeValue)"
     Write-Verbose "Source Durations: $($SourceDuration)"
     Write-Verbose "Source Audio Track Count: $($SourceaudioTracks.Count)"
@@ -581,7 +598,7 @@ foreach ($file in $files) {
         try {
             Invoke-SonarrCommand -commandName "RenameSeries" -body @{ seriesId = $seriesId }
             # Output the response
-            Write-Host -ForegroundColor Blue "Sonarr : Refresh command sent for Series $seriesTitle : ID $seriesId."
+            Write-Host -ForegroundColor Blue "Sonarr : Rename command sent for Series $seriesTitle : ID $seriesId."
         } 
         catch {
             Write-Host "Error connecting to Sonarr API: $_"
