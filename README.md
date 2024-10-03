@@ -23,9 +23,6 @@ And include any subtitle tracks if applicable.
 
 **Note:**  Because HandBrakeCLI is 'noisy' and emits progress to stdout and log info to stderr.  All jobs run in a background, and are logged and monitored for success.  This allowed the main script session to be much cleaner and provide working progress bars.
 
-
-This allowed the main Progress Bar 
-
 ## Getting Started
 Please read the Default Configuration and understand the assumptions before you accept the values for your use case
 
@@ -124,7 +121,7 @@ Remove Source Files - After each successful encode _(Only if the validation is 1
 * By Default the **-Subtitles** is set to **"1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20"**, which specifies which subtitle tracks to bring over
 
 **Debug & Job Log Parameters**
-* By Default the **-JobFolder** is set to **$PSScriptRoot+"\"**, which specifies where to create the job logs, by default it's the same folder the script was executed from
+* By Default the **-JobFolder** is set to **$PSScriptRoot**, which specifies where to create the job logs, by default it's the same folder the script was executed from
 * By Default the **-DebugJobs** is set to **"$true"**, which specifies to automatically remove the Powershell background jobs as they complete successfully
 * By Default the **-RemoveJobLogs** is set to **"$true"**, which specifies to automatically remove the text based .log files as they complete successfully
 * If you want to see the contents of the Jobs or Job Logs yourself, you can run the script with the following settings to tell it not to remove them automatically
@@ -134,7 +131,7 @@ Remove Source Files - After each successful encode _(Only if the validation is 1
 * The Log files will be in the same folder you ran the script from (assuming you didnt redirect the log output folder)
 * The Log files are time stamped (from the start of the job itself) for each Job_#
 * There are (3) log files for each job, the source scan, the encode job itself, and the target scan
-* To get the Job's themselves for manual investigation
+* To get the background PowerShell Job's themselves for manual investigation
 ```
 Get-Jobs | Format-Table -Auto -Wrap
 Get-Job[0] | Format-List
