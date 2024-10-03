@@ -153,6 +153,10 @@ Get-Jobs | Remove-Jobs -Force
 * By Default the **$UpdateSonarr** is **Blank**, update to $true to enable Sonarr Integration
 * By Default the **$sonarrBaseUrl** is **"http://localhost:8989/api/v3"**, update to your host address:port as required
 * By Default the **$SonarrApiKey** is **Blank**, update to your Sonarr API Key
+```
+.\handlebrake.ps1 -Source "Source Path" -Verbose -UpdateSonarr -SonarrApiKey "api key"
+```
+
 
 ## Authors
 
