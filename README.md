@@ -147,6 +147,10 @@ damburgey (aka StorageGuru)
 
 ## Version History
 
+* 0.3
+    * Added verbose output for source and target video file sizes
+	* Added compression ratio calculation in output after each successful encode
+
 * 0.2
     * Initial Release - On this new/final repo
     * $SourceIgnore now accepts an @('array','of','values) - for source file exclusion/filters
