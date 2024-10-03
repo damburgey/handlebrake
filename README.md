@@ -20,7 +20,7 @@ And include any subtitle tracks if applicable.
 * Compare the Source & Target metadata for validation on Video Stream, Duration, Auto & Subtitle track counts.
 * Remove the source file (if all validations are a success, and I provide the -RemoveSource flag)
 * After the first, and each susbequent job, measure the average encode duration, and use that along with the # of remaining jobs in queue to estimate time remaining for all jobs
-* Integration with Sonarr, if the file is part of a monitored TV Series, force a rescan after successful encode, If Sonarr is integrated already with Plex/JellyFin that will update as well
+* Integration with Sonarr, if the file is part of a monitored TV Series, force a rescan after successful encode
 
 **Note:**  Because HandBrakeCLI is 'noisy' and emits progress to stdout and log info to stderr.  All jobs run in a background, and are logged and monitored for success.  This allowed the main script session to be much cleaner and provide working progress bars.
 
