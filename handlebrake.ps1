@@ -501,9 +501,11 @@ foreach ($file in $files) {
     # Encode Job NOT Valid
     if ($RemoveSource -eq $true -and $EncodedVideoIsValid -ne $true){
         # Do NOT remove the original source file
-        Write-Host -ForegroundColor Red "Failed to Remove --> $original"
         Write-Host -ForegroundColor Red "Validation of encoded file failed..."
-        if ($RemoveTarget -eq $true){Remove-Item -LiteralPath $outputFileName -Force -Confirm:$false} # Performs the deletion on target video file upon failed validation}
+        if ($RemoveTarget -eq $true){
+            Remove-Item -LiteralPath $outputFileName -Force -Confirm:$false # Performs the deletion on target video file upon failed validation}
+            Write-Host -ForegroundColor Red "Removing Target File: $outputFileName"
+        }
     }
     
     # Compression Ratio NOT Valid
