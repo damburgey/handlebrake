@@ -116,6 +116,8 @@ Remove Source Files - After each successful encode _(Only if the validation is 1
 * By Default the **-Quality** is set to **"27"**, which specifies a quality level of 27
 * By Default the **-MinCompression** is set to **10**, which specifies the minimum compression level acceptable for any encode job
 * By Default the **-MaxCompression** is set to **70**, which specifies the maximum compression level acceptable for any encode job
+* By Default the **-MinBitrate** is set to **600**, which specifies the minimum bitrate level to attempt to transcode
+* By Default the **-MaxBitrate** is set to **9999**, which specifies the maximum bitrate level to attempt to transcode
 
 **Audio Encoding Parameters**
 * By Default the **-AEncoder** is set to **"copy"**, which specifies to attempt to bring over the audio tracks as-is
