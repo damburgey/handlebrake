@@ -20,6 +20,8 @@
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("jf")][string] $JobFolder = $PSScriptRoot+"\" # Folder MUST exist, defaults to where ever the script is ran from
 )
 
+# Version 0.3
+
 # Reset Global Variables
 $c=0
 $jobsDetails=@()
