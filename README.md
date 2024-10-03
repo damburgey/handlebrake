@@ -162,7 +162,7 @@ damburgey (aka StorageGuru)
 
 * 0.4
 	* Added Min and Max Compression value parameters
-	* If the target encoded file is < than the minmum or > than the maximum desired compression 
+	* If the target encoded file is < than the minimum or > than the maximum desired compression 
 	* --> Then the script will reject the target file, and by default remove it as well
 
 * 0.3
