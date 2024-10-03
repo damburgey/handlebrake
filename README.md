@@ -156,6 +156,10 @@ damburgey (aka StorageGuru)
 
 ## Version History
 
+* 0.6
+	* Added video detection on source file for x265, h265, hevc, vp9
+	* Will skip passed the video and continue the queue
+
 * 0.5
 	* Added integration with Sonarr
 	* Upon successful encode, it will detect the SeriesID and push the Refresh & Scan via API

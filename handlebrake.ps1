@@ -26,7 +26,7 @@
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("sak")][string] $SonarrApiKey = ""  # Replace with your actual API key
 )
 
-# Version 0.5
+# Version 0.6
 
 # Reset Global Variables
 $c=0
@@ -178,6 +178,13 @@ foreach ($file in $files) {
     # Parse the Source Log Validation File
     Get-Content $SourceLogValidationFile | ForEach-Object {
 
+        # See if this file is already HEVC, and skip it if so
+        if ($_ -match 'hevc' -or $_ -match 'vp9' -or $_ -match 'x265' -or $_ -match 'h265'){
+            Write-Host -ForegroundColor Yellow "Skipping: $($file.Name)"    
+            Write-Host -ForegroundColor Yellow "Because it is already HEVC/x265/VP9"
+            Break # Exit the loop on this source file
+        }
+
         # Match the line containing "libhb: scan thread" and capture the number of valid titles
         if ($_ -match 'libhb:\s*scan thread found\s*(\d+)\s+valid title\(s\)') {
             # Store the captured value
@@ -218,6 +225,8 @@ foreach ($file in $files) {
             $inSubtitleTracks = $false
         }
     }
+
+    Write-Verbose "Source Video Already x265: No"
 
     # Get the original source file size
     $SourceFileSizeBytes = (Get-Item -LiteralPath $file.FullName).Length
@@ -483,7 +492,6 @@ foreach ($file in $files) {
         # Do NOT remove the original source file
         Write-Host -ForegroundColor Red "Failed to Remove --> $original"
         Write-Host -ForegroundColor Red "The compression value of $CompressionRatio is above or below the requested values..."
-        if ($RemoveTarget -eq $true){Remove-Item -LiteralPath $outputFileName -Force -Confirm:$false} # Performs the deletion on target video file upon failed validation}
     }
     
     # RemoveSource NOT requested
@@ -558,12 +566,13 @@ foreach ($file in $files) {
         Write-Verbose "Sonarr:  Found matching Series: $SourceSeries with SeriesID: $seriesID"
         
         $currentSeries = Invoke-RestMethod -Uri "$sonarrBaseUrl/series/$seriesId" -Headers @{ "X-Api-Key" = $SonarrApiKey }
-
+        
         # Send the request to refresh the series
         try {
             Invoke-SonarrCommand -commandName "RescanSeries" -body @{ seriesId = $seriesId }
             # Output the response
             Write-Host -ForegroundColor Blue "Sonarr : Refresh command sent for Series $seriesTitle : ID $seriesId."
+            Start-Sleep 3
         } catch {
             Write-Host "Error connecting to Sonarr API: $_"
         }
@@ -573,11 +582,10 @@ foreach ($file in $files) {
             Invoke-SonarrCommand -commandName "RenameSeries" -body @{ seriesId = $seriesId }
             # Output the response
             Write-Host -ForegroundColor Blue "Sonarr : Refresh command sent for Series $seriesTitle : ID $seriesId."
-        } catch {
+        } 
+        catch {
             Write-Host "Error connecting to Sonarr API: $_"
         }
-
-        
 
     } #/update Sonarr
 
