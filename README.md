@@ -20,6 +20,7 @@ And include any subtitle tracks if applicable.
 * Compare the Source & Target metadata for validation on Video Stream, Duration, Auto & Subtitle track counts.
 * Remove the source file (if all validations are a success, and I provide the -RemoveSource flag)
 * After the first, and each susbequent job, measure the average encode duration, and use that along with the # of remaining jobs in queue to estimate time remaining for all jobs
+* Integration with Sonarr, if the file is part of a monitored TV Series, force a rescan after successful encode, If Sonarr is integrated already with Plex/JellyFin that will update as well
 
 **Note:**  Because HandBrakeCLI is 'noisy' and emits progress to stdout and log info to stderr.  All jobs run in a background, and are logged and monitored for success.  This allowed the main script session to be much cleaner and provide working progress bars.
 
@@ -104,12 +105,15 @@ Remove Source Files - After each successful encode _(Only if the validation is 1
 * By default the **-DestinationFolder** is **blank**, which will default the encoded output file to be in the same folder as the source
 * By default the **-DestinationFile** is **blank**, which is only ever used when you have a single -Source file, and you want to redirect both the output folder and specify the output file name
 * By default the **-RemoveSource** is **blank**, which tells the script NOT to remove the source file(s) after successful encoding
+* By default the **-RemoveTarget** is **$true**, which tells the script to remove the target file(s) after failing any validations
 
 **Video Encoding Parameters**
 * By Default the **-Preset** is set to **"H.265 NVENC 1080p"**, which specifies the HandBrakeCLI default preset I use by default
 * By Default the **-Encoder** is set to **"nvenc_h265"**, which specifies the HandBrakeCLI encoder to use Nvidia GPU
 * By Default the **-Format** is set to **"av_mp4"**, which specifies the output encoded file format/extension
 * By Default the **-Quality** is set to **"27"**, which specifies a quality level of 27
+* By Default the **-MinCompression** is set to **10**, which specifies the minimum compression level acceptable for any encode job
+* By Default the **-MaxCompression** is set to **70**, which specifies the maximum compression level acceptable for any encode job
 
 **Audio Encoding Parameters**
 * By Default the **-AEncoder** is set to **"copy"**, which specifies to attempt to bring over the audio tracks as-is
@@ -141,11 +145,25 @@ Get-Job[0] | Format-List
 Get-Jobs | Remove-Jobs -Force
 ```
 
+**Sonar Integration Parameters**
+* By Default the **$UpdateSonarr** is **Blank**, update to $true to enable Sonarr Integration
+* By Default the **$sonarrBaseUrl** is **"http://localhost:8989/api/v3"**, update to your host address:port as required
+* By Default the **$SonarrApiKey** is **Blank**, update to your Sonarr API Key
+
 ## Authors
 
 damburgey (aka StorageGuru)
 
 ## Version History
+
+* 0.5
+	* Added integration with Sonarr
+	* Upon successful encode, it will detect the SeriesID and push the Refresh & Scan via API
+
+* 0.4
+	* Added Min and Max Compression value parameters
+	* If the target encoded file is < than the minmum or > than the maximum desired compression 
+	* --> Then the script will reject the target file, and by default remove it as well
 
 * 0.3
     * Added verbose output for source and target video file sizes

@@ -2,7 +2,7 @@
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("hb")][string] $HandBrakeCLI="C:\Program Files\HandbrakeCLI\HandBrakeCLI.exe", # Set the path to HandBrakeCLI.exe
     [Parameter(Mandatory=$true,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("s")][string] $Source, # Specify either an individual file, or a folder containing many files
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("se")][string] $SourceExtensions="*.mkv", # Source file .extensions to include
-    [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("si")][array] $SourceIgnore=@('MeGusta','x265','Vault42'), # Source file EXCLUSIONs based on a search strings to filter out of the source file names
+    [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("si")][array] $SourceIgnore=@('MeGusta','x265','h265','Vault42'), # Source file EXCLUSIONs based on a search strings to filter out of the source file names
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("dfi")][string] $DestinationFile,  # Use only when specifing a single source file, and you want to direct the exact file output path/name
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("dfo")][string] $DestinationFolder, # Use when you want to specify a different output folder than the source folder, but use the same file names
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("p")][string] $Preset="H.265 NVENC 1080p", # Use the built in preset of H.265 NVENC 1080p
@@ -15,16 +15,62 @@
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("afb")][string] $AFailBack="av_aac", # Specify what audio codec to use, if we cant passthru the native audio
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("sub")][string] $Subtitles="1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20", # Selects the first 20 subtitles to be included
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("rs")][switch] $RemoveSource, # When used, this will delete the source file after a successful encode and validation on target file has occurred
+    [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("rt")][switch] $RemoveTarget=$true, # When true, this will remove the target file if anything goes wrong.
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("dj")][switch] $DebugJobs=$true, # By default the script will remove all jobs once complete, change to =$false to manually debug or pull info from the jobs
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("rjl")][switch] $RemoveJobLogs=$true, # When $true, this will also delete the individual job and validation log files aftee being used
-    [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("jf")][string] $JobFolder = $PSScriptRoot+"\" # Folder MUST exist, defaults to where ever the script is ran from
+    [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("jf")][string] $JobFolder = $PSScriptRoot+"\", # Folder MUST exist, defaults to where ever the script is ran from
+    [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("min")][int] $MinCompression="10", # 
+    [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("max")][int] $MaxCompression="70", #
+    [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("us")][switch] $UpdateSonarr, # When $true, this will trigger Sonarr to refresh the TV Series
+    [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("sbu")][string] $sonarrBaseUrl = "http://localhost:8989/api/v3",  # Adjust the URL if necessary
+    [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("sak")][string] $SonarrApiKey = ""  # Replace with your actual API key
 )
 
-# Version 0.3
+# Version 0.5
 
 # Reset Global Variables
 $c=0
 $jobsDetails=@()
+
+# Function to send a POST request to Sonarr API
+function Invoke-SonarrCommand {
+    param (
+        [string]$commandName,  # The command name (e.g., "Backup", "RefreshSeries")
+        [hashtable]$body = @{}  # Optional body parameters for certain commands
+    )
+
+    # Define the API endpoint for commands
+    $endpoint = "$sonarrBaseUrl/command"
+    
+    # Prepare headers for API request
+    $headers = @{
+        "X-Api-Key" = $SonarrApiKey
+        "Content-Type" = "application/json"
+    }
+
+    # Convert body parameters to JSON if provided
+    $bodyJson = $null
+    if ($body.Count -gt 0) {
+        $bodyJson = $body | ConvertTo-Json
+    }
+
+    # Prepare the request body including the command name
+    $postBody = @{
+        "name" = $commandName
+    }
+    if ($bodyJson) {
+        $postBody += $body
+    }
+
+    # Send the POST request
+    try {
+        $response = Invoke-RestMethod -Uri $endpoint -Method POST -Headers $headers -Body ($postBody | ConvertTo-Json)
+        Write-Host "Command '$commandName' executed successfully. Response:" -ForegroundColor Green
+        $response
+    } catch {
+        Write-Host "Error executing command '$commandName': $_" -ForegroundColor Red
+    }
+}
 
 # Test $JobFolder
 if (Test-Path -Path $JobFolder){
@@ -304,6 +350,7 @@ foreach ($file in $files) {
     $TargetDuration = @()
     $TargetVideoValid=0
     $TargetSizeValue = ""
+    $CompressionValid= ""
 
     # Parse the Target Log Validation File
     Get-Content $TargetLogValidationFile | ForEach-Object {
@@ -371,6 +418,7 @@ foreach ($file in $files) {
     }
     else {
         Write-Host -ForegroundColor Red "An Error has occured while trying to validate the Target file:"
+        if ($RemoveTarget -eq $true){Remove-Item -LiteralPath $outputFileName -Force -Confirm:$false} # Performs the deletion on target video file upon failed validation}
         Get-Job | Remove-Job -Force
         Exit 1
     }
@@ -393,10 +441,22 @@ foreach ($file in $files) {
         Write-Host -ForegroundColor Green "Source & Target Subtitle Tracks are a match!"
     }
 
-    # If all validations are successful, lets call it successful
+    # Validate compression ratio meets desired outcome
     $CompressionRatio = [math]::Round((($SourceFileSizeBytes - $TargetFileSizeBytes) / $SourceFileSizeBytes) * 100)
-    #$CompressionRatio = (($VideoSizeDifference / $SourceFileSize) * 100)
-    if ($SourceVideoStreamIsValid -eq $true -and $VideoDurationIsValid -eq $true -and $AudioTracksIsValid -eq $true -and $SubtitleTracksIsValid -eq $true){
+    if ($CompressionRatio -ge $MinCompression -and $CompressionRatio -le $MaxCompression){
+        $CompressionValid = $true
+    }
+    elseif ($CompressionRatio -le $MinCompression) {
+        $CompressionValid = $false
+        Write-Host -ForegroundColor Red "Compression Ratio of: $CompressionRatio is below the Minimum requested ratio of $MinCompression"
+    }
+    elseif ($CompressionRatio -ge $MaxCompression) {
+        $CompressionValid = $false
+        Write-Host -ForegroundColor Red "Compression Ratio of: $CompressionRatio is above the Maximum requested ratio of $MaxCompression"
+    }
+
+    # If all validations are successful, lets call it successful
+    if ($SourceVideoStreamIsValid -eq $true -and $VideoDurationIsValid -eq $true -and $AudioTracksIsValid -eq $true -and $SubtitleTracksIsValid -eq $true -and $CompressionValid -eq $true){
         $EncodedVideoIsValid = $True
         Write-Host -ForegroundColor Green "Validation of Target File --> $outputFileName"
         Write-Host -ForegroundColor Green "Was Succesful! Video stream is valid, Durations match, and Audio & Subtitle tracks match!"
@@ -406,14 +466,27 @@ foreach ($file in $files) {
     # Close out the Target Validation progress bar
     Write-Progress -Id 2 -Activity 'Validation Process' -Status "Done" -Completed
 
-    # Determine if we are to delete the source file upon successful encode
+    ###
+    ### Determine if we are to delete the source file upon successful encode
+    ###
+
+    # Encode Job NOT Valid
     if ($RemoveSource -eq $true -and $EncodedVideoIsValid -ne $true){
         # Do NOT remove the original source file
         Write-Host -ForegroundColor Red "Failed to Remove --> $original"
         Write-Host -ForegroundColor Red "Validation of encoded file failed..."
-        Write-Host -ForegroundColor Red "Manually delete either the original source file(s) or target file(s) and try again."  
+        if ($RemoveTarget -eq $true){Remove-Item -LiteralPath $outputFileName -Force -Confirm:$false} # Performs the deletion on target video file upon failed validation}
     }
     
+    # Compression Ratio NOT Valid
+    elseif ($RemoveSource -eq $true -and $CompressionValid -ne $true){
+        # Do NOT remove the original source file
+        Write-Host -ForegroundColor Red "Failed to Remove --> $original"
+        Write-Host -ForegroundColor Red "The compression value of $CompressionRatio is above or below the requested values..."
+        if ($RemoveTarget -eq $true){Remove-Item -LiteralPath $outputFileName -Force -Confirm:$false} # Performs the deletion on target video file upon failed validation}
+    }
+    
+    # RemoveSource NOT requested
     elseif ($RemoveSource -eq $false -and $EncodedVideoIsValid -eq $true) {
         # Do NOT remove the original source file
         Write-Host -ForegroundColor Green "Validation of $outputFileName was Sucessfull!"
@@ -421,7 +494,9 @@ foreach ($file in $files) {
         Write-Host -ForegroundColor Green "$TargetVideoStream" # Displays the output for the Video stream validation
         Write-Host -ForegroundColor Green "$TargetVideoDuration" # Displays the output for the video duration
     }
-    elseif ($RemoveSource -eq $true -and $EncodedVideoIsValid -eq $true){
+    
+    # RemoveSource IS requested, and all checks are valid, will try to remove source file
+    elseif ($RemoveSource -eq $true -and $EncodedVideoIsValid -eq $true -and $CompressionValid -eq $true){
         # Remove the original source file
         $original = $sourceFolderPath + $file.Name
         try {
@@ -455,6 +530,56 @@ foreach ($file in $files) {
         Write-Verbose "Background jobs complete for this run.  Removing them from background tasks."
         Get-Job | Remove-Job -Force
     }
+
+    # Update Sonarr with the new target file if job was successful
+    if ($UpdateSonarr -eq $true -and $EncodedVideoIsValid -eq $True){
+        # Create a web request to get the series list
+        try {
+            $response = Invoke-RestMethod -Uri "$sonarrBaseUrl/series" -Method Get -Headers @{ "X-Api-Key" = $SonarrApiKey }
+
+            # Output the series list
+            $Series = $response | ForEach-Object {
+                [PSCustomObject]@{
+                    Title       = $_.title
+                    Id          = $_.id
+                    Status      = $_.status
+                    Path        = $_.path  # This is the full path of the series
+                }
+            } 
+            $Series = $Series | Sort-Object -Property Path
+        } catch {
+            Write-Host "Error connecting to Sonarr API: $_"
+        }
+
+        # Find the series that matches the folder path
+        $SourceSeries = $source -replace '\\Season \d{2}.*', ''
+        $seriesId = ($series | Where-Object { $_.path -like $($SourceSeries) }).id
+        $seriesTitle = ($series | Where-Object { $_.path -like $($SourceSeries) }).title
+        Write-Verbose "Sonarr:  Found matching Series: $SourceSeries with SeriesID: $seriesID"
+        
+        $currentSeries = Invoke-RestMethod -Uri "$sonarrBaseUrl/series/$seriesId" -Headers @{ "X-Api-Key" = $SonarrApiKey }
+
+        # Send the request to refresh the series
+        try {
+            Invoke-SonarrCommand -commandName "RescanSeries" -body @{ seriesId = $seriesId }
+            # Output the response
+            Write-Host -ForegroundColor Blue "Sonarr : Refresh command sent for Series $seriesTitle : ID $seriesId."
+        } catch {
+            Write-Host "Error connecting to Sonarr API: $_"
+        }
+
+        # Send the request to rename files in this series
+        try {
+            Invoke-SonarrCommand -commandName "RenameSeries" -body @{ seriesId = $seriesId }
+            # Output the response
+            Write-Host -ForegroundColor Blue "Sonarr : Refresh command sent for Series $seriesTitle : ID $seriesId."
+        } catch {
+            Write-Host "Error connecting to Sonarr API: $_"
+        }
+
+        
+
+    } #/update Sonarr
 
 } #/foreach
 
