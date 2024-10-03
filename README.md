@@ -170,7 +170,7 @@ damburgey (aka StorageGuru)
 
 * 0.5
 	* Added integration with Sonarr
-	* Upon successful encode, it will detect the SeriesID and push the Refresh & Scan via API
+	* Upon successful encode, it will detect the SeriesID and push the Refresh/Scan & Rename via API
 
 * 0.4
 	* Added Min and Max Compression value parameters
