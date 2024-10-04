@@ -21,6 +21,7 @@ And include any subtitle tracks if applicable.
 * Remove the source file (if all validations are a success, and I provide the -RemoveSource flag)
 * After the first, and each susbequent job, measure the average encode duration, and use that along with the # of remaining jobs in queue to estimate time remaining for all jobs
 * Integration with Sonarr, if the file is part of a monitored TV Series, force a rescan after successful encode
+* Monitor compression in Real-Time, and abort encode job after 20%, if the -MinCompression is not being met
 
 **Note:**  Because HandBrakeCLI is 'noisy' and emits progress to stdout and log info to stderr.  All jobs run in a background, and are logged and monitored for success.  This allowed the main script session to be much cleaner and provide working progress bars.
 
@@ -119,6 +120,7 @@ Remove Source Files - After each successful encode _(Only if the validation is 1
 * By Default the **-Quality** is set to **"27"**, which specifies a quality level of 27
 * By Default the **-MinCompression** is set to **10**, which specifies the minimum compression level acceptable for any encode job
 * By Default the **-MaxCompression** is set to **70**, which specifies the maximum compression level acceptable for any encode job
+* By Default the **-MonitorCompression** is set to **20**, which specifies what % of the encode job must complete before real-time detection aborts the job, if -MinCompression isn't being met
 * By Default the **-MinBitrate** is set to **600**, which specifies the minimum bitrate level to attempt to transcode
 * By Default the **-MaxBitrate** is set to **9999**, which specifies the maximum bitrate level to attempt to transcode
 
@@ -166,6 +168,12 @@ Get-Jobs | Remove-Jobs -Force
 damburgey (aka StorageGuru)
 
 ## Version History
+
+* 0.9
+	* Added 'Real-Time' compression Monitor
+	* Based on -MinCompression value
+	* Added -MonitorCompression, what % of the encode job, to make the determination on if compression is going to be acceptable or not
+	
 
 * 0.8d
 	* Minor code fixes

@@ -23,6 +23,7 @@
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("jf")][string] $JobFolder = $PSScriptRoot+"\", # Folder MUST exist, defaults to where ever the script is ran from
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("min")][int] $MinCompression="10", # 
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("max")][int] $MaxCompression="70", #
+    [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("mon")][int] $MonitorCompression="20", #
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("minb")][int] $MinBitrate="600", # 
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("maxb")][int] $MaxBitrate="99999", #
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("us")][switch] $UpdateSonarr, # When $true, this will trigger Sonarr to refresh the TV Series
@@ -30,7 +31,7 @@
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("sak")][string] $SonarrApiKey = ""  # Replace with your actual API key
 )
 
-# Version 0.8d
+# Version 0.9
 
 # Reset Global Variables
 $c=0
@@ -74,6 +75,27 @@ function Invoke-SonarrCommand {
     } catch {
         Write-Host "Error executing command '$commandName': $_" -ForegroundColor Red
     }
+}
+
+# Function to calculate compression ratio
+function Get-CompressionRatio {
+    param(
+        [double]$sourceSize,
+        [double]$targetSize,
+        [double]$completionPercentage
+    )
+
+    if ($sourceSize -eq 0) {
+        return 0  # Prevent division by zero
+    }
+
+    # Calculate the compression ratio in real-time
+    #$compressionRatio = ($sourceSize / $targetSize) * ($completionPercentage / 100)
+    $EstimatedTarget = ($targetSize * 100 / $completionPercentage)
+    $EstimatedCompression = $EstimatedTarget / $sourceSize
+    $compressionRatio = $EstimatedCompression * 100
+
+    return $compressionRatio
 }
 
 # Test $JobFolder
@@ -127,6 +149,9 @@ foreach ($file in $files) {
     $ValidateTargetJob=$null
     $TargetVideoStream=$null
     $TargetVideoDuration=$null
+    $RequiredCompressionInvalid=$null
+    $percentage=$null
+    $adjustedPercentageDifference=$null
 
     # Get the current date and time in a specific format
     $dateTime = Get-Date -Format "yyyyMMdd_HHmmss"
@@ -334,10 +359,101 @@ foreach ($file in $files) {
 
     # Monitor Job Status to main console
     while ($EncodeJob.State -eq 'Running'){
+        
+        # Initial and Loop delay
         Start-Sleep 5
-        Get-Content $JobLogFile -Tail 1
-    }
+        
+        # Get the last line of the JobLogFile
+        $LastLine = Get-Content $JobLogFile -Tail 1
+        
+        # Display the contents of the LastLine
+        $LastLine
+
+        # Parse the contents of the LastLine
+        if ($LastLine -match "task (\d+) of (\d+),\s*([\d\.]+)\s*%\s*\(([\d\.]+)\s*fps,\s*avg\s*([\d\.]+)\s*fps,\s*ETA\s*(\d+h\d+m\d+s)\)") {
+            $taskCurrent = $matches[1]
+            $taskTotal = $matches[2]
+            $percentage = $matches[3]
+            $fps = $matches[4]
+            $avgFps = $matches[5]
+            $eta = $matches[6]
+        }
+
+        # Output the parsed values
+        #"Task: $taskCurrent of $taskTotal"
+        #"Percentage Complete: $percentage %"
+        #"FPS: $fps"
+        #"Avg FPS: $avgFps"
+        #"ETA: $eta"
+
+        # Get the current sizes of the files
+        $sourceSize = (Get-Item -LiteralPath $file.FullName).Length
+        $targetSize = (Get-Item -LiteralPath $outputFileName).Length
+        
+        # Get the real-time percentage of completion (this needs to be connected to the actual compression job)
+        $completionPercentage = $percentage
+
+        # Calculate the real-time compression ratio based on the current sizes and the completion percentage
+        $compressionRatio = Get-CompressionRatio -sourceSize $sourceSize -targetSize $targetSize -completionPercentage $completionPercentage
+
+        # Output the results
+        #"Source File Size: {0:N2} bytes" -f $sourceSize
+        #"Target File Size: {0:N2} bytes" -f $targetSize
+        #"Completion Percentage: {0:N2}%" -f $completionPercentage
+        "Current Compression Ratio: {0:N2}%" -f $compressionRatio
+
+        ###
+        ### Real-Time Compression monitor
+        ###
+        
+        $roundedPercentage = [math]::Round($completionPercentage)
+                
+        # Ignore values below 10
+        if ($roundedPercentage -le 10){}
+        
+        # Check to see if our current compression % is tracking above our minimum required compression, based on a % of completion defined by $MonitorCompression
+        elseif ($roundedPercentage -ge $MonitorCompression -and $compressionRatio -lt $MinCompression){
+            Write-Host -ForegroundColor Red "Target compression of $compressionRatio % is less than the required $MinCompression %..."
+            $RequiredCompressionInvalid = $true
+        }
+        
+        # Detect Invalid Compression
+        if ($RequiredCompressionInvalid -eq $true){
+            Try {
+                Write-Host -ForegroundColor Red "Canceling this encode job..."
+                Get-Job | Remove-Job -Force
+
+                Write-Verbose  "Removing Target File: $outputFileName"
+                Remove-Item -LiteralPath $outputFileName -Force -Confirm:$false # Performs the deletion on target video file upon failed validation
+                
+                # Clean up this Job's logfiles
+                if ($RemoveJobLogs -eq $true){
+                    Write-Verbose "Done with this Job's logfiles.  Removing them from disk."
+                    if (Test-Path $JobLogFile){Remove-Item $JobLogFile -Force -Confirm:$false}
+                    if (Test-Path $SourceLogValidationFile){Remove-Item $SourceLogValidationFile -Force -Confirm:$false}
+                    if (Test-Path $TargetLogValidationFile){Remove-Item $TargetLogValidationFile -Force -Confirm:$false}
+                }
+                
+            } #/try
+            catch {
+                Write-Host -ForegroundColor Red "Something failed with cleanup..."
+            }
+
+            $SkipLoop=$true
+
+        } #/if
+
+    } #/while monitoring encode job
     
+    # Detect Skipped Item and continue to next file in queue
+    if ($SkipLoop -eq $true){
+        Write-Verbose "Finished cleaning up this failed job, proceeding with reamaining queue..." 
+        Continue
+    }
+    else {
+        Write-Verbose "Real-time Compression Monitoring checks all passed!"
+    }
+
     # Add delay if $TrancodeFolder is used
     if ($TranscodeFolder -ne $null){
         Start-Sleep 5
@@ -499,7 +615,7 @@ foreach ($file in $files) {
     }
 
     # Validate compression ratio meets desired outcome
-    $CompressionRatio = [math]::Round((($SourceFileSizeBytes - $TargetFileSizeBytes) / $SourceFileSizeBytes) * 100)
+    #$CompressionRatio = [math]::Round((($SourceFileSizeBytes - $TargetFileSizeBytes) / $SourceFileSizeBytes) * 100)
     if ($CompressionRatio -ge $MinCompression -and $CompressionRatio -le $MaxCompression){
         $CompressionValid = $true
         Write-Host -ForegroundColor Green "Target file has been compressed: $CompressionRatio %"
@@ -542,11 +658,12 @@ foreach ($file in $files) {
     # Encode Job NOT Valid
     if ($RemoveSource -eq $true -and $EncodedVideoIsValid -ne $true){
         # Do NOT remove the original source file, instead remove the target file
-        Write-Host -ForegroundColor Red "Validation of encoded video stream failed..."
+        Write-Host -ForegroundColor Red "Validation of encoded video failed one or more checks..."
         if ($RemoveTarget -eq $true){
             Remove-Item -LiteralPath $outputFileName -Force -Confirm:$false # Performs the deletion on target video file upon failed validation}
             Write-Host -ForegroundColor Red "Removing Target File: $outputFileName"
         }
+
     }
     
     # Compression Ratio NOT Valid
@@ -651,7 +768,7 @@ foreach ($file in $files) {
 
         # Find the series that matches the folder path
         $SourceSeries = $source -replace '\\Season \d{2}.*', ''
-        $SourceSeries = $source -replace '\\Specials\', ''
+        $SourceSeries = $source -replace '\\Specials\*', ''
         $seriesId = ($series | Where-Object { $_.path -like $($SourceSeries) }).id
         $seriesTitle = ($series | Where-Object { $_.path -like $($SourceSeries) }).title
         Write-Verbose "Sonarr:  Found matching Series: $SourceSeries with SeriesID: $seriesID"
