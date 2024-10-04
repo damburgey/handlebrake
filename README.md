@@ -108,6 +108,8 @@ Remove Source Files - After each successful encode _(Only if the validation is 1
 * By default the **-DestinationFile** is **blank**, which is only ever used when you have a single -Source file, and you want to redirect both the output folder and specify the output file name
 * By default the **-RemoveSource** is **blank**, which tells the script NOT to remove the source file(s) after successful encoding
 * By default the **-RemoveTarget** is **$true**, which tells the script to remove the target file(s) after failing any validations
+* By default the **-TranscodeFolder** is **blank**, which tells the script to use a specific folder while transcoding
+* By default the **-MoveOnSuccess** is **$true**, works with -TranscodeFolder and -RemoveSource, to allow for same name conflicts
 
 **Video Encoding Parameters**
 * By Default the **-Preset** is set to **"H.265 NVENC 1080p"**, which specifies the HandBrakeCLI default preset I use by default
