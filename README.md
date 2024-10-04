@@ -173,8 +173,8 @@ damburgey (aka StorageGuru)
 	* Added 'Real-Time' compression Monitor
 	* Based on -MinCompression value
 	* Added -MonitorCompression, what % of the encode job, to make the determination on if compression is going to be acceptable or not
+	* If at -MonitorCompression % of encode job, the -MinCompression isn't being met, abort the encode job, clean-up, and move on to the next file
 	
-
 * 0.8d
 	* Minor code fixes
 	* Allowed for Source video duration and Target video duration to match if within +/- 1 second
