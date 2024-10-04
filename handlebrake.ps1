@@ -5,6 +5,8 @@
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("si")][array] $SourceIgnore=@('MeGusta','x265','h265','Vault42'), # Source file EXCLUSIONs based on a search strings to filter out of the source file names
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("dfi")][string] $DestinationFile,  # Use only when specifing a single source file, and you want to direct the exact file output path/name
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("dfo")][string] $DestinationFolder, # Use when you want to specify a different output folder than the source folder, but use the same file names
+    [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("tf")][string] $TranscodeFolder, # Use when you want to specify a different output folder than the source folder, but use the same file names
+    [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("mos")][switch] $MoveOnSuccess=$true, # Use with $TranscodeFolder to move the target file to the source folder after validation
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("p")][string] $Preset="H.265 NVENC 1080p", # Use the built in preset of H.265 NVENC 1080p
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("e")][string] $Encoder="nvenc_h265", # Use Nvidia GPU encoding for H.265 codec
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("f")][string] $Format="av_mp4", # Format to encode to, in this case MP4
@@ -179,7 +181,6 @@ foreach ($file in $files) {
     
     # Parse the Source Log Validation File
     Get-Content $SourceLogValidationFile -Raw | ForEach-Object {
-
         # See if this file is already HEVC, and skip it if so
         if ($_ -match 'hevc' -or $_ -match 'vp9' -or $_ -match 'x265' -or $_ -match 'h265'){
             Write-Host -ForegroundColor Yellow "Skipping: $($file.Name)"    
@@ -187,7 +188,9 @@ foreach ($file in $files) {
             Write-Progress -Id 1 -ParentId 0 -Activity 'Validation Process' -Completed
             Continue # Exit the loop on this source file
         }
+    }
 
+    Get-Content $SourceLogValidationFile -Raw | ForEach-Object {
         # Check the bitrate of this file to make sure its within our min/max values
         if ($_ -match "bitrate:\s*(\d+)\s*kb/s") {
             # Store the captured value
@@ -201,7 +204,9 @@ foreach ($file in $files) {
             Write-Progress -Id 1 -ParentId 0 -Activity 'Validation Process' -Completed
             Continue # Exit the loop on this source file
         }
-
+    }
+    
+    Get-Content $SourceLogValidationFile | ForEach-Object {
 
         # Match the line containing "libhb: scan thread" and capture the number of valid titles
         if ($_ -match 'libhb:\s*scan thread found\s*(\d+)\s+valid title\(s\)') {
@@ -280,7 +285,7 @@ foreach ($file in $files) {
     Write-Host -ForegroundColor Blue "Working on $($file.FullName)"
         
     # Determine if we specified a destination manually, or use the same folder as the source by default for each output file
-    if ($DestinationFile -eq "" -and $DestinationFolder -eq ""){
+    if ($DestinationFile -eq "" -and $DestinationFolder -eq "" -and $TranscodeFolder -eq ""){
         # Construct the output file name
         $sourceFolderPath = $file.Directory.FullName + "\"
         $outputFileName = Join-Path -Path $sourceFolderPath -ChildPath ($file.BaseName + ".mp4") 
@@ -294,6 +299,10 @@ foreach ($file in $files) {
     elseif ($DestinationFolder -ne ""){
         # Destination Folder was provided, redirecting all outputs to that folder
         $outputFileName = Join-Path -Path $DestinationFolder -ChildPath ($file.BaseName + ".mp4") 
+    }
+
+    elseif ($TranscodeFolder -ne ""){
+        $outputFileName = Join-Path -Path $TranscodeFolder -ChildPath ($file.BaseName + ".mp4") 
     }
 
     # Run HandBrakeCLI with specified options as a background job
@@ -328,6 +337,11 @@ foreach ($file in $files) {
         Get-Content $JobLogFile -Tail 1
     }
     
+    # Add delay if $TrancodeFolder is used
+    if ($TranscodeFolder -ne $null){
+        Start-Sleep 3
+    }
+
     # Get the previous job details
     $jobDetail = Get-Job -State Completed | Sort-Object -Property EndTime -Descending | Select-Object -First 1
     
@@ -532,6 +546,10 @@ foreach ($file in $files) {
             Write-Host -ForegroundColor Blue "Removing --> $original"
             Remove-Item -LiteralPath $original -Force -Confirm:$false # Performs the deletion on source video file upon successful validation
             Start-Sleep 2 # Allows for some time to pass before checking if the file still remains
+            if ($TranscodeFolder -ne $null -and $MoveOnSuccess -eq $true){
+                Move-Item $outputFileName -Destination $sourceFolderPath
+                Start-Sleep 2
+            }
         }
         catch {
             Write-Host -ForegroundColor Red "Failed to Remove --> $original"
