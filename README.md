@@ -10,7 +10,7 @@ And include any subtitle tracks if applicable.
 This script handles that, and much more :)
 
 
-**My goals were to:**
+**My goals are to:**
 
 * Be able to point it at any individual file, or root folder containing multiple video files, but also be able to filter out for: Any desired values in the file name, or file extensions.
 * Take high bitrate low compression H264 videos, and compress them with minimal video loss, using the HandBrakeCLi preset = H.265 NVENC 1080p.  (Leveraging Nvidia GPU for the encoding)
@@ -25,8 +25,6 @@ This script handles that, and much more :)
 * Remove the source file (if all validations are a success, when the -RemoveSource flag is provided)
 * Measure the average encoding job, and use that to update the Progress Bar with the ETA for the entire Queue
 * Integration with Sonarr, if the file is part of a monitored TV Series, force a rescan & rename after successful encode.  (If you have renaming enabled in Sonarr)'
-* -- This will detect and rename the [h264] to [h265] if you have the codec as part of your Sonarr file naming template
-* -- Which if you have Sonarr already connected to a Plex or Jellyfin server, will also trigger the refresh there.
 
 
 **Note:**  Because HandBrakeCLI is 'noisy' and emits progress to stdout and log info to stderr.  All jobs run in a background, and are logged and monitored for success.  This allowed the main script session to be much cleaner and provide working progress bars.
@@ -167,6 +165,8 @@ Get-Jobs | Remove-Jobs -Force
 * By Default the **$UpdateSonarr** is **Blank**, update to $true to enable Sonarr Integration
 * By Default the **$sonarrBaseUrl** is **"http://localhost:8989/api/v3"**, update to your host address:port as required
 * By Default the **$SonarrApiKey** is **Blank**, update to your Sonarr API Key
+* Note: This will detect and rename the [h264] to [h265] if you have the codec as part of your Sonarr file naming template (i.e. MediaInfo VideoCodec)
+* Note: Which if you have Sonarr already connected to a Plex or Jellyfin server, will also trigger the refresh there.
 ```
 .\handlebrake.ps1 -Source "Source Path" -Verbose -UpdateSonarr -SonarrApiKey "api key"
 ```
