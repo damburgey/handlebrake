@@ -169,7 +169,7 @@ foreach ($file in $files) {
     # 1st Run
     if ($averageExecutionTime -eq $null){
         # Progress Bar and Status
-        Write-Verbose "1st Run"
+        Write-Verbose "1st Run - Measuring Average Encode Time"
         Write-Progress -Id 0 -Activity 'Performing Video Transcoding' -Status "Processing Video File $($c) of $filecount" -CurrentOperation "$($file.Name)" -PercentComplete (($c/$filecount) * 100)
     }
     
