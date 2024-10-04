@@ -6,6 +6,7 @@
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("dfi")][string] $DestinationFile,  # Use only when specifing a single source file, and you want to direct the exact file output path/name
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("dfo")][string] $DestinationFolder, # Use when you want to specify a different output folder than the source folder, but use the same file names
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("tf")][string] $TranscodeFolder, # Use when you want to specify a different output folder than the source folder, but use the same file names
+    [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("tcd")][int] $TranscodeFolderDelay=2, # Number of seconds to wait after encoding, to allow time for the file to finish writing before touching it
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("mos")][switch] $MoveOnSuccess=$true, # Use with $TranscodeFolder to move the target file to the source folder after validation
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("p")][string] $Preset="H.265 NVENC 1080p", # Use the built in preset of H.265 NVENC 1080p
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("e")][string] $Encoder="nvenc_h265", # Use Nvidia GPU encoding for H.265 codec
@@ -31,7 +32,7 @@
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("sak")][string] $SonarrApiKey = ""  # Replace with your actual API key
 )
 
-# Version 0.9
+# Version 0.9a
 
 # Reset Global Variables
 $c=0
@@ -151,7 +152,7 @@ foreach ($file in $files) {
     $RequiredCompressionInvalid=$null
     $percentage=$null
     $CurrentCompressionRatio=$null
-    $SkipLoop=$null
+    $SkipLoop=$false
 
     # Get the current date and time in a specific format
     $dateTime = Get-Date -Format "yyyyMMdd_HHmmss"
@@ -214,7 +215,6 @@ foreach ($file in $files) {
             Continue # Exit the loop on this source file
         }
     }
-
     Get-Content $SourceLogValidationFile -Raw | ForEach-Object {
         # Check the bitrate of this file to make sure its within our min/max values
         if ($_ -match "bitrate:\s*(\d+)\s*kb/s") {
@@ -230,7 +230,6 @@ foreach ($file in $files) {
             Continue # Exit the loop on this source file
         }
     }
-    
     Get-Content $SourceLogValidationFile | ForEach-Object {
 
         # Match the line containing "libhb: scan thread" and capture the number of valid titles
@@ -279,7 +278,6 @@ foreach ($file in $files) {
     # Get the original source file size
     $SourceFileSizeBytes = (Get-Item -LiteralPath $file.FullName).Length
     $SourceFileSize = $SourceFileSizeBytes -as [string] -replace '(\d)(?=(\d{3})+$)', '$1,'
-
     
     # Output results
     if ($SourceVideoValid -ige 1){Write-Verbose "Source Video Valid: Yes"}
@@ -316,19 +314,25 @@ foreach ($file in $files) {
         $outputFileName = Join-Path -Path $sourceFolderPath -ChildPath ($file.BaseName + ".mp4") 
     }
     
+    # Destination File was provided, using that for output file instead
     elseif ($DestinationFile -ne "") {
-        # Destination File was provided, using that for output file instead
         $outputFileName = $DestinationFile
     }
     
+    # Destination Folder was provided, redirecting all outputs to that folder    
     elseif ($DestinationFolder -ne ""){
-        # Destination Folder was provided, redirecting all outputs to that folder
         $outputFileName = Join-Path -Path $DestinationFolder -ChildPath ($file.BaseName + ".mp4") 
     }
 
+    # Default the output directly to the source folder, because no other output folder was specified.
     elseif ($TranscodeFolder -ne ""){
         $sourceFolderPath = $file.Directory.FullName + "\"
-        $outputFileName = Join-Path -Path $TranscodeFolder -ChildPath ($file.BaseName + ".mp4") 
+        $outputFileName = Join-Path -Path $TranscodeFolder -ChildPath ($file.BaseName + ".mp4")
+        if (Test-Path $outputFileName){
+            Write-Host -ForegroundColor Red "Output file already exists: $($outputFileName)"
+            Write-Host -ForegroundColor Red "Skipping..."
+            Continue 
+        }
     }
 
     # Run HandBrakeCLI with specified options as a background job
@@ -409,17 +413,19 @@ foreach ($file in $files) {
         # Ignore values below 10
         if ($completionPercentage -le 10){}
         
-        # Check to see if our current compression % is tracking above our minimum required compression, based on a % of completion defined by $MonitorCompression
+        # Check to see if our current compression % is tracking below our minimum required compression, based on a % of completion defined by $MonitorCompression
         elseif ($completionPercentage -ge $MonitorCompression -and $CurrentCompressionRatio -lt $MinCompression){
-            Write-Host -ForegroundColor Red "Target compression of $CurrentCompressionRatio % is less than the required $MinCompression %..."
-            $RequiredCompressionInvalid = $true
-        }
-        elseif ($completionPercentage -ge $MonitorCompression -and $CurrentCompressionRatio -gt $MaxCompression){
-            Write-Host -ForegroundColor Red "Target compression of $CurrentCompressionRatio % is more than the required $MaxCompression %..."
+            Write-Host -ForegroundColor Red "Target compression of $([Math]::Round($CurrentCompressionRatio, 2))% is less than the required $MinCompression %..."
             $RequiredCompressionInvalid = $true
         }
         
-        # Detect Invalid Compression
+        # Check to see if our current compression % is tracking above our minimum required compression, based on a % of completion defined by $MonitorCompression
+        elseif ($completionPercentage -ge $MonitorCompression -and $CurrentCompressionRatio -gt $MaxCompression){
+            Write-Host -ForegroundColor Red "Target compression of $([Math]::Round($CurrentCompressionRatio, 2))% is more than the required $MaxCompression %..."
+            $RequiredCompressionInvalid = $true
+        }
+        
+        # Handle aborting encoding job, and perform cleanup
         if ($RequiredCompressionInvalid -eq $true){
             Try {
                 Write-Host -ForegroundColor Red "Canceling this encode job..."
@@ -452,13 +458,15 @@ foreach ($file in $files) {
         Write-Verbose "Finished cleaning up this failed job, proceeding with reamaining queue..." 
         Continue
     }
-    else {
+    
+    # Real-Time compression checks all passed
+    elseif ($SkipLoop -ne $true) {
         Write-Verbose "Real-time Compression Monitoring checks all passed!"
     }
 
-    # Add delay if $TrancodeFolder is used
+    # Add Delay if $TrancodeFolder is used, to allow the file to finish writing before validating against them
     if ($TranscodeFolder -ne $null){
-        Start-Sleep 5
+        Start-Sleep $TranscodeFolderDelay
     }
 
     # Get the previous job details
@@ -593,7 +601,8 @@ foreach ($file in $files) {
     if ($DifferenceInSeconds -le 1) {
         $VideoDurationIsValid = $true
         Write-Host -ForegroundColor Green "Source & Target Video Durations are a match!"
-    } else {
+    } 
+    else {
         $VideoDurationIsValid = $false
         Write-Host -ForegroundColor Red "Source & Target Video Durations DONT match!"
     }
@@ -619,16 +628,16 @@ foreach ($file in $files) {
     # Validate compression ratio meets desired outcome
     if ($CurrentCompressionRatio -ge $MinCompression -and $CurrentCompressionRatio -le $MaxCompression){
         $CompressionValid = $true
-        Write-Host -ForegroundColor Green "Target file has been compressed: $CurrentCompressionRatio %"
+        Write-Host -ForegroundColor Green "Target file has been compressed: $([Math]::Round($CurrentCompressionRatio, 2))%"
         Write-Verbose "Compression Ratio is acceptable!"
     }
     elseif ($CurrentCompressionRatio -le $MinCompression) {
         $CompressionValid = $false
-        Write-Host -ForegroundColor Red "Compression Ratio of: $CurrentCompressionRatio is below the Minimum requested ratio of $MinCompression"
+        Write-Host -ForegroundColor Red "Compression Ratio of: $([Math]::Round($CurrentCompressionRatio, 2))% is below the Minimum requested ratio of $MinCompression"
     }
     elseif ($CurrentCompressionRatio -ge $MaxCompression) {
         $CompressionValid = $false
-        Write-Host -ForegroundColor Red "Compression Ratio of: $CurrentCompressionRatio is above the Maximum requested ratio of $MaxCompression"
+        Write-Host -ForegroundColor Red "Compression Ratio of: $([Math]::Round($CurrentCompressionRatio, 2))% is above the Maximum requested ratio of $MaxCompression"
     }
     else {
         Write-Host -ForegroundColor Red "Compression Ratio couldn't be calculated..."

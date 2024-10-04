@@ -7,21 +7,26 @@ A PowerShell script to 'handle' the automation and validation of HandBrakeCLI ba
 I've been searching for, and found a lot of other people also looking for, and struggling with using HandBrakeCLI to convert 1080p H264 content in to H265.
 Not only on the video conversion, but with audio passthrough _(i.e. don't re-encode audio tracks)_
 And include any subtitle tracks if applicable.
+This script handles that, and much more :)
+
 
 **My goals were to:**
 
 * Be able to point it at any individual file, or root folder containing multiple video files, but also be able to filter out for specific file extensions, and ignore certain files with specific things in their name.
-* Take high bitrate low compression H264 videos, and compress them with minimal video loss, using the HandBrakeCLi preset = H.265 NVENC 1080p.
+* Take high bitrate low compression H264 videos, and compress them with minimal video loss, using the HandBrakeCLi preset = H.265 NVENC 1080p.  Leveraging my Nvidia GPU for the encoding.
 * Passthrough all Audio tracks as-is where possible & bring over all the Subtitle tracks as well.
-* Progress monitoring, logging, and validation on all Jobs
-* Scan the Source video files for each job, and gather the metadata
+* Progress monitoring, logging, and validation on all Jobs.
+* Scan the Source video files for each job, and gather the metadata.
 * Transcode the file(s)
-* Scan the target video files for each job, and gather the metadata
+* Monitor compression in Real-Time, and abort encode job after 20% if the results are undesirable  (Min/Max Compression values)
+* Scan the target video files for each job, and gather the metadata.
 * Compare the Source & Target metadata for validation on Video Stream, Duration, Auto & Subtitle track counts.
 * Remove the source file (if all validations are a success, and I provide the -RemoveSource flag)
-* After the first, and each susbequent job, measure the average encode duration, and use that along with the # of remaining jobs in queue to estimate time remaining for all jobs
-* Integration with Sonarr, if the file is part of a monitored TV Series, force a rescan after successful encode
-* Monitor compression in Real-Time, and abort encode job after 20%, if the -MinCompression is not being met
+* After the first, and each susbequent job, measure the average encode duration, and use that along with the # of remaining jobs in queue to estimate time remaining for all jobs.
+* Integration with Sonarr, if the file is part of a monitored TV Series, force a rescan & rename after successful encode.  (If you have renaming enabled in Sonarr)'
+* -- This will detect and rename the [h264] to [h265] if you have the codec as part of your Sonarr file naming template
+* -- Which if you have Sonarr already connected to a Plex or Jellyfin server, will also trigger the refresh there.
+
 
 **Note:**  Because HandBrakeCLI is 'noisy' and emits progress to stdout and log info to stderr.  All jobs run in a background, and are logged and monitored for success.  This allowed the main script session to be much cleaner and provide working progress bars.
 
@@ -111,6 +116,9 @@ Remove Source Files - After each successful encode _(Only if the validation is 1
 * By default the **-RemoveSource** is **blank**, which tells the script NOT to remove the source file(s) after successful encoding
 * By default the **-RemoveTarget** is **$true**, which tells the script to remove the target file(s) after failing any validations
 * By default the **-TranscodeFolder** is **blank**, which tells the script to use a specific folder while transcoding
+* Note: Works best on network share, because the real time capacity of the file is accurate.  Plus its a relatively low KB/s bandwidth requirement, so why wear out your precious NVMes :)
+* Note: If you try a local disk and the file size stays at 0KB because of File System caching, it will interfer with the Real-Time compression detection
+* By default the **-TranscodeFolderDelay** is **2**, works with -TranscodeFolder, and is the delay in seconds to wait after encoding for the file to finish writing, before any action is taken against it
 * By default the **-MoveOnSuccess** is **$true**, works with -TranscodeFolder and -RemoveSource, to allow for same name conflicts
 
 **Video Encoding Parameters**
@@ -162,12 +170,26 @@ Get-Jobs | Remove-Jobs -Force
 .\handlebrake.ps1 -Source "Source Path" -Verbose -UpdateSonarr -SonarrApiKey "api key"
 ```
 
+**Recommended Parameters**
+* All folders must exist
+* -Verbose           Adds significant output to the console with all metadata and validation outputs
+* -RemoveSource      Remove the source file, after 100% validated successful encode
+* -TranscodeFolder   Encoded file is created in a temp location, and moved to the source folder after the original is removed (allows for same name encode jobs)
+```
+.\handlebrake.ps1 -Source "Source Path" -Verbose -RemoveSource -TranscodeFolder "Z:\transcode\"
+```
+
 
 ## Authors
 
 damburgey (aka StorageGuru)
 
 ## Version History
+
+* 0.9a
+	* Added -TranscodeFolderDelay with a default of 2 seconds, to wait after encode, before attempting to touch the file
+	* Cleaned up Encode Job console output & combined - Compression Ratio: % to the background job's direct handbrakecli output
+	* Cleaned up / added commenting throughout script
 
 * 0.9
 	* Added 'Real-Time' compression Monitor w/ abort job & continue workflow
