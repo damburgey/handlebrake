@@ -21,11 +21,11 @@
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("dj")][switch] $DebugJobs=$true, # By default the script will remove all jobs once complete, change to =$false to manually debug or pull info from the jobs
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("rjl")][switch] $RemoveJobLogs=$true, # When $true, this will also delete the individual job and validation log files aftee being used
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("jf")][string] $JobFolder = $PSScriptRoot+"\", # Folder MUST exist, defaults to where ever the script is ran from
-    [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("min")][int] $MinCompression="10", # 
-    [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("max")][int] $MaxCompression="70", #
-    [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("mon")][int] $MonitorCompression="20", #
-    [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("minb")][int] $MinBitrate="600", # 
-    [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("maxb")][int] $MaxBitrate="99999", #
+    [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("min")][int] $MinCompression="10", # Minimum compression value to accept
+    [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("max")][int] $MaxCompression="70", # Maximum compression value to accept
+    [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("mon")][int] $MonitorCompression="20", # What % of the Encode Job to abort if compression isn't in the desired range
+    [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("minb")][int] $MinBitrate="600", # Minimum Bitrate of source file to attemp to encode
+    [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("maxb")][int] $MaxBitrate="99999", # Maximum Bitrate of source file to attemp to encode
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("us")][switch] $UpdateSonarr, # When $true, this will trigger Sonarr to refresh the TV Series
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("sbu")][string] $sonarrBaseUrl = "http://localhost:8989/api/v3",  # Adjust the URL if necessary
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("sak")][string] $SonarrApiKey = ""  # Replace with your actual API key
@@ -85,15 +85,14 @@ function Get-CompressionRatio {
         [double]$completionPercentage
     )
 
-    if ($sourceSize -eq 0) {
+    if ($sourceSize -eq 0 -or $targetSize -eq 0) {
         return 0  # Prevent division by zero
     }
 
     # Calculate the compression ratio in real-time
-    #$compressionRatio = ($sourceSize / $targetSize) * ($completionPercentage / 100)
-    $EstimatedTarget = ($targetSize * 100 / $completionPercentage)
+    $EstimatedTarget = ($targetSize * 100) / $completionPercentage
     $EstimatedCompression = $EstimatedTarget / $sourceSize
-    $compressionRatio = $EstimatedCompression * 100
+    $compressionRatio = 100 - ($EstimatedCompression * 100)
 
     return $compressionRatio
 }
@@ -387,33 +386,35 @@ foreach ($file in $files) {
         #"ETA: $eta"
 
         # Get the current sizes of the files
-        $sourceSize = (Get-Item -LiteralPath $file.FullName).Length
-        $targetSize = (Get-Item -LiteralPath $outputFileName).Length
+        $CurrentSourceSize = (Get-Item -LiteralPath $file.FullName).Length
+        $CurrentTargetSize = (Get-Item -LiteralPath $outputFileName).Length
         
         # Get the real-time percentage of completion (this needs to be connected to the actual compression job)
-        $completionPercentage = $percentage
+        $completionPercentage = [math]::Round($percentage)
 
         # Calculate the real-time compression ratio based on the current sizes and the completion percentage
-        $compressionRatio = Get-CompressionRatio -sourceSize $sourceSize -targetSize $targetSize -completionPercentage $completionPercentage
-
+        $CurrentCompressionRatio = Get-CompressionRatio -sourceSize $CurrentSourceSize -targetSize $CurrentTargetSize -completionPercentage $percentage
+        
         # Output the results
-        #"Source File Size: {0:N2} bytes" -f $sourceSize
-        #"Target File Size: {0:N2} bytes" -f $targetSize
+        #"Source File Size: {0:N2} bytes" -f $CurrentSourceSize
+        #"Target File Size: {0:N2} bytes" -f $CurrentTargetSize
         #"Completion Percentage: {0:N2}%" -f $completionPercentage
-        "Current Compression Ratio: {0:N2}%" -f $compressionRatio
+        "  -- Overall Compression Ratio: {0:N2}%" -f $CurrentCompressionRatio
 
         ###
         ### Real-Time Compression monitor
         ###
         
-        $roundedPercentage = [math]::Round($completionPercentage)
-                
         # Ignore values below 10
-        if ($roundedPercentage -le 10){}
+        if ($completionPercentage -le 10){}
         
         # Check to see if our current compression % is tracking above our minimum required compression, based on a % of completion defined by $MonitorCompression
-        elseif ($roundedPercentage -ge $MonitorCompression -and $compressionRatio -lt $MinCompression){
-            Write-Host -ForegroundColor Red "Target compression of $compressionRatio % is less than the required $MinCompression %..."
+        elseif ($completionPercentage -ge $MonitorCompression -and $CurrentCompressionRatio -lt $MinCompression){
+            Write-Host -ForegroundColor Red "Target compression of $CurrentCompressionRatio % is less than the required $MinCompression %..."
+            $RequiredCompressionInvalid = $true
+        }
+        elseif ($completionPercentage -ge $MonitorCompression -and $CurrentCompressionRatio -gt $MaxCompression){
+            Write-Host -ForegroundColor Red "Target compression of $CurrentCompressionRatio % is more than the required $MaxCompression %..."
             $RequiredCompressionInvalid = $true
         }
         
@@ -615,19 +616,18 @@ foreach ($file in $files) {
     }
 
     # Validate compression ratio meets desired outcome
-    #$CompressionRatio = [math]::Round((($SourceFileSizeBytes - $TargetFileSizeBytes) / $SourceFileSizeBytes) * 100)
-    if ($CompressionRatio -ge $MinCompression -and $CompressionRatio -le $MaxCompression){
+    if ($CurrentCompressionRatio -ge $MinCompression -and $CurrentCompressionRatio -le $MaxCompression){
         $CompressionValid = $true
-        Write-Host -ForegroundColor Green "Target file has been compressed: $CompressionRatio %"
+        Write-Host -ForegroundColor Green "Target file has been compressed: $CurrentCompressionRatio %"
         Write-Verbose "Compression Ratio is acceptable!"
     }
-    elseif ($CompressionRatio -le $MinCompression) {
+    elseif ($CurrentCompressionRatio -le $MinCompression) {
         $CompressionValid = $false
-        Write-Host -ForegroundColor Red "Compression Ratio of: $CompressionRatio is below the Minimum requested ratio of $MinCompression"
+        Write-Host -ForegroundColor Red "Compression Ratio of: $CurrentCompressionRatio is below the Minimum requested ratio of $MinCompression"
     }
-    elseif ($CompressionRatio -ge $MaxCompression) {
+    elseif ($CurrentCompressionRatio -ge $MaxCompression) {
         $CompressionValid = $false
-        Write-Host -ForegroundColor Red "Compression Ratio of: $CompressionRatio is above the Maximum requested ratio of $MaxCompression"
+        Write-Host -ForegroundColor Red "Compression Ratio of: $CurrentCompressionRatio is above the Maximum requested ratio of $MaxCompression"
     }
     else {
         Write-Host -ForegroundColor Red "Compression Ratio couldn't be calculated..."
@@ -670,7 +670,7 @@ foreach ($file in $files) {
     elseif ($RemoveSource -eq $true -and $CompressionValid -ne $true){
         # Do NOT remove the original source file, instead remove the target file
         Write-Host -ForegroundColor Red "Failed to Remove --> $original"
-        Write-Host -ForegroundColor Red "The compression value of $CompressionRatio is above or below the requested values..."
+        Write-Host -ForegroundColor Red "The compression value of $CurrentCompressionRatio is above or below the requested values..."
         if ($RemoveTarget -eq $true){
             Remove-Item -LiteralPath $outputFileName -Force -Confirm:$false # Performs the deletion on target video file upon failed validation}
             Write-Host -ForegroundColor Red "Removing Target File: $outputFileName"
