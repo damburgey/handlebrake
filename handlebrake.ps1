@@ -30,7 +30,7 @@
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("sak")][string] $SonarrApiKey = ""  # Replace with your actual API key
 )
 
-# Version 0.7
+# Version 0.8
 
 # Reset Global Variables
 $c=0
@@ -302,6 +302,7 @@ foreach ($file in $files) {
     }
 
     elseif ($TranscodeFolder -ne ""){
+        $sourceFolderPath = $file.Directory.FullName + "\"
         $outputFileName = Join-Path -Path $TranscodeFolder -ChildPath ($file.BaseName + ".mp4") 
     }
 
@@ -339,7 +340,7 @@ foreach ($file in $files) {
     
     # Add delay if $TrancodeFolder is used
     if ($TranscodeFolder -ne $null){
-        Start-Sleep 3
+        Start-Sleep 5
     }
 
     # Get the previous job details
@@ -546,10 +547,6 @@ foreach ($file in $files) {
             Write-Host -ForegroundColor Blue "Removing --> $original"
             Remove-Item -LiteralPath $original -Force -Confirm:$false # Performs the deletion on source video file upon successful validation
             Start-Sleep 2 # Allows for some time to pass before checking if the file still remains
-            if ($TranscodeFolder -ne $null -and $MoveOnSuccess -eq $true){
-                Move-Item $outputFileName -Destination $sourceFolderPath
-                Start-Sleep 2
-            }
         }
         catch {
             Write-Host -ForegroundColor Red "Failed to Remove --> $original"
@@ -560,7 +557,17 @@ foreach ($file in $files) {
         if (Test-Path $original){ # Validate that the source file was deleted
             Write-Host -ForegroundColor Green "Validation of File was deletion was succesful."
             Write-Host -ForegroundColor Green "Removed --> $original"
+        }
+    }
 
+    # Move Target to Source Folder from Transcode Folder
+    if ($TranscodeFolder -ne $null -and $MoveOnSuccess -eq $true){
+        Write-Verbose "Attempting to move target file: $outputFileName"
+        Write-Verbose "To the Source Folder: $sourceFolderPath"
+        Move-Item -LiteralPath $outputFileName -Destination $sourceFolderPath -Confirm:$false
+        Start-Sleep 3
+        if (Test-Path -LiteralPath "$sourceFolderPath\$outputFileName"){
+            Write-Verbose "TrancodedFolder output was moved to source successfuly."   
         }
     }
 

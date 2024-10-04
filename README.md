@@ -164,6 +164,11 @@ damburgey (aka StorageGuru)
 
 ## Version History
 
+* 0.8
+	* Added optional $TrascodeFolder (temp folder for encode job)
+	* And $MoveOnSuccess=$true
+	* This allows for encoding jobs to replace the source file, when the file names would be identical
+
 * 0.7
 	* Added $MinBitrate and $MaxBitrate
 	* Will skip passed the video if the detected Bitrate isn't within our desired parameters
