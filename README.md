@@ -122,7 +122,7 @@ Remove Source Files - After each successful encode _(Only if the validation is 1
 * By Default the **-MaxCompression** is set to **70**, which specifies the maximum compression level acceptable for any encode job
 * By Default the **-MonitorCompression** is set to **20**, which specifies what % of the encode job must complete before real-time detection aborts the job, if -MinCompression isn't being met
 * By Default the **-MinBitrate** is set to **600**, which specifies the minimum bitrate level to attempt to transcode
-* By Default the **-MaxBitrate** is set to **9999**, which specifies the maximum bitrate level to attempt to transcode
+* By Default the **-MaxBitrate** is set to **99999**, which specifies the maximum bitrate level to attempt to transcode
 
 **Audio Encoding Parameters**
 * By Default the **-AEncoder** is set to **"copy"**, which specifies to attempt to bring over the audio tracks as-is
