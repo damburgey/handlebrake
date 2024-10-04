@@ -1,7 +1,7 @@
 ﻿[CmdletBinding()]Param(
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("hb")][string] $HandBrakeCLI="C:\Program Files\HandbrakeCLI\HandBrakeCLI.exe", # Set the path to HandBrakeCLI.exe
     [Parameter(Mandatory=$true,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("s")][string] $Source, # Specify either an individual file, or a folder containing many files
-    [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("se")][string] $SourceExtensions="*.mkv", # Source file .extensions to include
+    [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("se")][array] $SourceExtensions=@("*.mkv","*.mp4"), # Source file .extensions to include
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("si")][array] $SourceIgnore=@('MeGusta','x265','h265','Vault42'), # Source file EXCLUSIONs based on a search strings to filter out of the source file names
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("dfi")][string] $DestinationFile,  # Use only when specifing a single source file, and you want to direct the exact file output path/name
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("dfo")][string] $DestinationFolder, # Use when you want to specify a different output folder than the source folder, but use the same file names
@@ -30,7 +30,7 @@
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("sak")][string] $SonarrApiKey = ""  # Replace with your actual API key
 )
 
-# Version 0.8
+# Version 0.8b
 
 # Reset Global Variables
 $c=0
@@ -87,7 +87,7 @@ else {
 
 # Get all video files in the source folder
 Write-Host -ForegroundColor Blue "Gathering Source file(s) from $Source"
-$sourcefiles = Get-ChildItem -Recurse -Path $Source -Filter $SourceExtensions | Sort-Object
+$sourcefiles = Get-ChildItem -Recurse -Path $Source -Include $SourceExtensionss | Sort-Object
 Write-Host -ForegroundColor Blue "Detected $($sourcefiles.count) Source Files "
 
 # Exclude from job queue anything specified in $SourceIgnore

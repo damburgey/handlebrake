@@ -166,6 +166,11 @@ damburgey (aka StorageGuru)
 
 ## Version History
 
+* 0.8b
+	* Changed $SourceExtensions to allow for multiple extensions
+	* This along with -TranscodeFolder below, can encode, validate, and overwrite files with the same name
+	* Without -TranscodeFolder, it would be possible to have naming conflicts when encoding a .mp4 to .mp4 in the same folder/file name.ext
+
 * 0.8
 	* Added optional $TrascodeFolder (temp folder for encode job)
 	* And $MoveOnSuccess=$true
