@@ -12,17 +12,18 @@ This script handles that, and much more :)
 
 **My goals were to:**
 
-* Be able to point it at any individual file, or root folder containing multiple video files, but also be able to filter out for specific file extensions, and ignore certain files with specific things in their name.
-* Take high bitrate low compression H264 videos, and compress them with minimal video loss, using the HandBrakeCLi preset = H.265 NVENC 1080p.  Leveraging my Nvidia GPU for the encoding.
+* Be able to point it at any individual file, or root folder containing multiple video files, but also be able to filter out for: Any desired values in the file name, or file extensions.
+* Take high bitrate low compression H264 videos, and compress them with minimal video loss, using the HandBrakeCLi preset = H.265 NVENC 1080p.  (Leveraging Nvidia GPU for the encoding)
 * Passthrough all Audio tracks as-is where possible & bring over all the Subtitle tracks as well.
 * Progress monitoring, logging, and validation on all Jobs.
 * Scan the Source video files for each job, and gather the metadata.
+* Skip the Source video file, if it's already hevc, x265, h265, vp9 in it's metadata
 * Transcode the file(s)
 * Monitor compression in Real-Time, and abort encode job after 20% if the results are undesirable  (Min/Max Compression values)
 * Scan the target video files for each job, and gather the metadata.
-* Compare the Source & Target metadata for validation on Video Stream, Duration, Auto & Subtitle track counts.
-* Remove the source file (if all validations are a success, and I provide the -RemoveSource flag)
-* After the first, and each susbequent job, measure the average encode duration, and use that along with the # of remaining jobs in queue to estimate time remaining for all jobs.
+* Compare the Source & Target metadata for validation on Video Stream, Duration, Audio & Subtitle track counts.
+* Remove the source file (if all validations are a success, when the -RemoveSource flag is provided)
+* Measure the average encoding job, and use that to update the Progress Bar with the ETA for the entire Queue
 * Integration with Sonarr, if the file is part of a monitored TV Series, force a rescan & rename after successful encode.  (If you have renaming enabled in Sonarr)'
 * -- This will detect and rename the [h264] to [h265] if you have the codec as part of your Sonarr file naming template
 * -- Which if you have Sonarr already connected to a Plex or Jellyfin server, will also trigger the refresh there.
