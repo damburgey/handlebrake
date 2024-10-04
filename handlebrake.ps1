@@ -649,6 +649,8 @@ foreach ($file in $files) {
         Write-Host -ForegroundColor Green "Validation of Target File --> $outputFileName"
         Write-Host -ForegroundColor Green "Was Succesful! Video stream is valid, Durations match, Audio & Subtitle tracks match, and Compression is acceptable!"
     }
+    
+    # Else, let's figure out which validation failed
     else {
         Write-Host -ForegroundColor Red "Not all final validations passed..."
         Write-Verbose "Target Video Stream is Valid: $TargetVideoStreamIsValid"
@@ -715,7 +717,7 @@ foreach ($file in $files) {
         }
     }
 
-    # Move Target to Source Folder from Transcode Folder
+    # Move Target from Transcode Folder to Source Folder
     if ($TranscodeFolder -ne $null -and $MoveOnSuccess -eq $true -and $EncodedVideoIsValid -eq $true){
         
         # Remove Original Source File
