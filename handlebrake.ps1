@@ -21,7 +21,7 @@
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("dj")][switch] $DebugJobs=$true, # By default the script will remove all jobs once complete, change to =$false to manually debug or pull info from the jobs
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("rjl")][switch] $RemoveJobLogs=$true, # When $true, this will also delete the individual job and validation log files aftee being used
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("jf")][string] $JobFolder = $PSScriptRoot+"\", # Folder MUST exist, defaults to where ever the script is ran from
-    [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("min")][int] $MinCompression="10", # Minimum compression value to accept
+    [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("min")][int] $MinCompression="9", # Minimum compression value to accept
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("max")][int] $MaxCompression="70", # Maximum compression value to accept
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("mon")][int] $MonitorCompression="20", # What % of the Encode Job to abort if compression isn't in the desired range
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("minb")][int] $MinBitrate="600", # Minimum Bitrate of source file to attemp to encode
@@ -150,7 +150,8 @@ foreach ($file in $files) {
     $TargetVideoDuration=$null
     $RequiredCompressionInvalid=$null
     $percentage=$null
-    $adjustedPercentageDifference=$null
+    $CurrentCompressionRatio=$null
+    $SkipLoop=$null
 
     # Get the current date and time in a specific format
     $dateTime = Get-Date -Format "yyyyMMdd_HHmmss"
@@ -365,9 +366,6 @@ foreach ($file in $files) {
         # Get the last line of the JobLogFile
         $LastLine = Get-Content $JobLogFile -Tail 1
         
-        # Display the contents of the LastLine
-        $LastLine
-
         # Parse the contents of the LastLine
         if ($LastLine -match "task (\d+) of (\d+),\s*([\d\.]+)\s*%\s*\(([\d\.]+)\s*fps,\s*avg\s*([\d\.]+)\s*fps,\s*ETA\s*(\d+h\d+m\d+s)\)") {
             $taskCurrent = $matches[1]
@@ -396,10 +394,13 @@ foreach ($file in $files) {
         $CurrentCompressionRatio = Get-CompressionRatio -sourceSize $CurrentSourceSize -targetSize $CurrentTargetSize -completionPercentage $percentage
         
         # Output the results
+        # Display the contents of the LastLine
+        
+        Write-Host "$LastLine - Compression Ratio: $([Math]::Round($CurrentCompressionRatio, 2))%"
         #"Source File Size: {0:N2} bytes" -f $CurrentSourceSize
         #"Target File Size: {0:N2} bytes" -f $CurrentTargetSize
         #"Completion Percentage: {0:N2}%" -f $completionPercentage
-        "  -- Overall Compression Ratio: {0:N2}%" -f $CurrentCompressionRatio
+        #"Encoding: Compression Ratio: {0:N2}%" -f $CurrentCompressionRatio
 
         ###
         ### Real-Time Compression monitor

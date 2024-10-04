@@ -170,9 +170,9 @@ damburgey (aka StorageGuru)
 ## Version History
 
 * 0.9
-	* Added 'Real-Time' compression Monitor
+	* Added 'Real-Time' compression Monitor w/ abort job & continue workflow
 	* Based on -MinCompression value
-	* Added -MonitorCompression, what % of the encode job, to make the determination on if compression is going to be acceptable or not
+	* Added -MonitorCompression, what % of the encode job (defaults to 20%), to make the determination on if compression is going to be acceptable or not
 	* If at -MonitorCompression % of encode job, the -MinCompression isn't being met, abort the encode job, clean-up, and move on to the next file
 	
 * 0.8d
