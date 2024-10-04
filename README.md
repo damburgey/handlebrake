@@ -183,7 +183,7 @@ damburgey (aka StorageGuru)
 	* Without -TranscodeFolder, it would be possible to have naming conflicts when encoding a .mp4 to .mp4 in the same folder/file name.ext
 
 * 0.8
-	* Added optional $TrascodeFolder (temp folder for encode job)
+	* Added optional $TranscodeFolder (temp folder for encode job)
 	* And $MoveOnSuccess=$true
 	* This allows for encoding jobs to replace the source file, when the file names would be identical
 
