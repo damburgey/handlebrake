@@ -84,6 +84,7 @@ Remove Source Files - After each successful encode _(Only if the validation is 1
 * Before each Job the script will do a --SCAN run on the source and collect the media metadata
 * After the encode job, the script will do another --SCAN against the target file and collect the media metadata
 * Then it will compare the two files and make sure: The video stream is valid, the duration matches, the # of audio tracks match, and the # of subtitle tracks match
+* Finally it will check that the compression ratio was acceptable. (Between the Min and Max compression values)
 * All of those must be true, in addition to sending the -RemoveSource parameter when executing the script for it to automatically remove the source video file(s)
 
 
@@ -166,7 +167,9 @@ damburgey (aka StorageGuru)
 
 ## Version History
 
-* 0.8b
+* 0.8d
+	* Minor code fixes
+	* Allowed for Source video duration and Target video duration to match if within +/- 1 second
 	* Changed $SourceExtensions to allow for multiple extensions
 	* This along with -TranscodeFolder below, can encode, validate, and overwrite files with the same name
 	* Without -TranscodeFolder, it would be possible to have naming conflicts when encoding a .mp4 to .mp4 in the same folder/file name.ext

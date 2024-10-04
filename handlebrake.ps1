@@ -30,7 +30,7 @@
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("sak")][string] $SonarrApiKey = ""  # Replace with your actual API key
 )
 
-# Version 0.8b
+# Version 0.8d
 
 # Reset Global Variables
 $c=0
@@ -261,7 +261,7 @@ foreach ($file in $files) {
     else {Write-Verbose "Source Video Valid: No"}
     Write-Verbose "Source Video Bitrate: $($SourceVideoBitrate)"
     Write-Verbose "Source Video Resolution: $($SourceSizeValue)"
-    Write-Verbose "Source Durations: $($SourceDuration)"
+    Write-Verbose "Source Duration: $($SourceDuration)"
     Write-Verbose "Source Audio Track Count: $($SourceaudioTracks.Count)"
     Write-Verbose "Source Audio Tracks: $($SourceaudioTracks -join ', ')"
     Write-Verbose "Source Subtitle Track Count: $($SourcesubtitleTracks.Count)"
@@ -447,7 +447,7 @@ foreach ($file in $files) {
     if ($TargetVideoValid -ige 1){Write-Verbose "Target Video Valid: Yes"}
     else {Write-Verbose "Target Video Valid: No"}
     Write-Verbose "Target Video Resolution: $($TargetSizeValue)"
-    Write-Verbose "Target Durations: $($TargetDuration)"
+    Write-Verbose "Target Duration: $($TargetDuration)"
     Write-Verbose "Target Audio Track Count: $($TargetaudioTracks.Count)"
     Write-Verbose "Target Audio Tracks: $($TargetaudioTracks -join ', ')"
     Write-Verbose "Target Subtitle Track Count: $($TargetsubtitleTracks.Count)"
@@ -461,21 +461,32 @@ foreach ($file in $files) {
     }
     else {
         Write-Host -ForegroundColor Red "An Error has occured while trying to validate the Target file:"
+        $TargetStreamIsValid = $false
         if ($RemoveTarget -eq $true){Remove-Item -LiteralPath $outputFileName -Force -Confirm:$false} # Performs the deletion on target video file upon failed validation}
         Get-Job | Remove-Job -Force
         Exit 1
     }
 
     # Validate if duration matches source
-    if ($SourceDuration -eq $TargetDuration){
+    $SourceDuration = [timespan]::Parse($SourceDuration)
+    $TargetDuration = [timespan]::Parse($TargetDuration)
+    $DifferenceInSeconds = [Math]::Abs(($SourceDuration - $TargetDuration).TotalSeconds)
+    # Check if the difference is within 1 second
+    if ($DifferenceInSeconds -le 1) {
         $VideoDurationIsValid = $true
         Write-Host -ForegroundColor Green "Source & Target Video Durations are a match!"
+    } else {
+        $VideoDurationIsValid = $false
+        Write-Host -ForegroundColor Red "Source & Target Video Durations DONT match!"
     }
-
+    
     # Validate all audio tracks matches source
     if ($SourceaudioTracks.Count -eq $TargetaudioTracks.Count){
         $AudioTracksIsValid = $true
         Write-Host -ForegroundColor Green "Source & Target Audio Tracks are a match!"
+    }
+    else {
+        Write-Host -ForegroundColor Red "Source & Target Audio Tracks DONT match!"
     }
 
     # Validate all subtitle tracks matches source
@@ -483,11 +494,16 @@ foreach ($file in $files) {
         $SubtitleTracksIsValid = $true
         Write-Host -ForegroundColor Green "Source & Target Subtitle Tracks are a match!"
     }
+    else {
+        Write-Host -ForegroundColor Red "Source & Target Subtitle Tracks DONT match!"
+    }
 
     # Validate compression ratio meets desired outcome
     $CompressionRatio = [math]::Round((($SourceFileSizeBytes - $TargetFileSizeBytes) / $SourceFileSizeBytes) * 100)
     if ($CompressionRatio -ge $MinCompression -and $CompressionRatio -le $MaxCompression){
         $CompressionValid = $true
+        Write-Host -ForegroundColor Green "Target file has been compressed: $CompressionRatio %"
+        Write-Verbose "Compression Ratio is acceptable!"
     }
     elseif ($CompressionRatio -le $MinCompression) {
         $CompressionValid = $false
@@ -497,26 +513,36 @@ foreach ($file in $files) {
         $CompressionValid = $false
         Write-Host -ForegroundColor Red "Compression Ratio of: $CompressionRatio is above the Maximum requested ratio of $MaxCompression"
     }
+    else {
+        Write-Host -ForegroundColor Red "Compression Ratio couldn't be calculated..."
+    }
 
     # If all validations are successful, lets call it successful
-    if ($SourceVideoStreamIsValid -eq $true -and $VideoDurationIsValid -eq $true -and $AudioTracksIsValid -eq $true -and $SubtitleTracksIsValid -eq $true -and $CompressionValid -eq $true){
+    if ($TargetStreamIsValid -eq $true -and $VideoDurationIsValid -eq $true -and $AudioTracksIsValid -eq $true -and $SubtitleTracksIsValid -eq $true -and $CompressionValid -eq $true){
         $EncodedVideoIsValid = $True
         Write-Host -ForegroundColor Green "Validation of Target File --> $outputFileName"
-        Write-Host -ForegroundColor Green "Was Succesful! Video stream is valid, Durations match, and Audio & Subtitle tracks match!"
-        Write-Host -ForegroundColor Green "Target file has been compressed: $CompressionRatio %"
+        Write-Host -ForegroundColor Green "Was Succesful! Video stream is valid, Durations match, Audio & Subtitle tracks match, and Compression is acceptable!"
+    }
+    else {
+        Write-Host -ForegroundColor Red "Not all final validations passed..."
+        Write-Verbose "Target Video Stream is Valid: $TargetVideoStreamIsValid"
+        Write-Verbose "Video Duration Match: $VideoDurationIsValid"
+        Write-Verbose "Audio Tracks Match: $AudioTracksIsValid"
+        Write-Verbose "Subtitle Tracks Match: $SubtitleTracksIsValid"
+        Write-Verbose "Compression is Valid: $CompressionValid"
     }
 
     # Close out the Target Validation progress bar
     Write-Progress -Id 2 -Activity 'Validation Process' -Status "Done" -Completed
 
     ###
-    ### Determine if we are to delete the source file upon successful encode
+    ### Determine if we are to delete the source file upon successful encode, or remove the target file upon failure
     ###
 
     # Encode Job NOT Valid
     if ($RemoveSource -eq $true -and $EncodedVideoIsValid -ne $true){
-        # Do NOT remove the original source file
-        Write-Host -ForegroundColor Red "Validation of encoded file failed..."
+        # Do NOT remove the original source file, instead remove the target file
+        Write-Host -ForegroundColor Red "Validation of encoded video stream failed..."
         if ($RemoveTarget -eq $true){
             Remove-Item -LiteralPath $outputFileName -Force -Confirm:$false # Performs the deletion on target video file upon failed validation}
             Write-Host -ForegroundColor Red "Removing Target File: $outputFileName"
@@ -525,9 +551,13 @@ foreach ($file in $files) {
     
     # Compression Ratio NOT Valid
     elseif ($RemoveSource -eq $true -and $CompressionValid -ne $true){
-        # Do NOT remove the original source file
+        # Do NOT remove the original source file, instead remove the target file
         Write-Host -ForegroundColor Red "Failed to Remove --> $original"
         Write-Host -ForegroundColor Red "The compression value of $CompressionRatio is above or below the requested values..."
+        if ($RemoveTarget -eq $true){
+            Remove-Item -LiteralPath $outputFileName -Force -Confirm:$false # Performs the deletion on target video file upon failed validation}
+            Write-Host -ForegroundColor Red "Removing Target File: $outputFileName"
+        }
     }
     
     # RemoveSource NOT requested
@@ -535,12 +565,10 @@ foreach ($file in $files) {
         # Do NOT remove the original source file
         Write-Host -ForegroundColor Green "Validation of $outputFileName was Sucessfull!"
         Write-Host -ForegroundColor Green "Source File was not requested to be removed, please validate and remove manually..."
-        Write-Host -ForegroundColor Green "$TargetVideoStream" # Displays the output for the Video stream validation
-        Write-Host -ForegroundColor Green "$TargetVideoDuration" # Displays the output for the video duration
     }
     
     # RemoveSource IS requested, and all checks are valid, will try to remove source file
-    elseif ($RemoveSource -eq $true -and $EncodedVideoIsValid -eq $true -and $CompressionValid -eq $true){
+    elseif ($RemoveSource -eq $true -and $EncodedVideoIsValid -eq $true -and $TranscodeFolder -eq ""){
         # Remove the original source file
         $original = $sourceFolderPath + $file.Name
         try {
@@ -561,7 +589,23 @@ foreach ($file in $files) {
     }
 
     # Move Target to Source Folder from Transcode Folder
-    if ($TranscodeFolder -ne $null -and $MoveOnSuccess -eq $true){
+    if ($TranscodeFolder -ne $null -and $MoveOnSuccess -eq $true -and $EncodedVideoIsValid -eq $true){
+        
+        # Remove Original Source File
+        try {
+            $original = $sourceFolderPath + $file.Name
+            Write-Host -ForegroundColor Blue "Removing --> $original"
+            Remove-Item -LiteralPath $original -Force -Confirm:$false # Performs the deletion on source video file upon successful validation
+            Start-Sleep 2 # Allows for some time to pass before checking if the file still remains
+        }
+        catch {
+            Write-Host -ForegroundColor Red "Failed to Remove --> $original"
+            Write-Host -ForegroundColor Red "Most likely a permissions issue..."    
+            Write-Host -ForegroundColor Red "Manually delete the original source file(s)"
+            Exit 1    
+        }
+
+        # Move Target File to Source Folder
         Write-Verbose "Attempting to move target file: $outputFileName"
         Write-Verbose "To the Source Folder: $sourceFolderPath"
         Move-Item -LiteralPath $outputFileName -Destination $sourceFolderPath -Confirm:$false
@@ -607,6 +651,7 @@ foreach ($file in $files) {
 
         # Find the series that matches the folder path
         $SourceSeries = $source -replace '\\Season \d{2}.*', ''
+        $SourceSeries = $source -replace '\\Specials\', ''
         $seriesId = ($series | Where-Object { $_.path -like $($SourceSeries) }).id
         $seriesTitle = ($series | Where-Object { $_.path -like $($SourceSeries) }).title
         Write-Verbose "Sonarr:  Found matching Series: $SourceSeries with SeriesID: $seriesID"
