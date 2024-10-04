@@ -102,7 +102,7 @@ Remove Source Files - After each successful encode _(Only if the validation is 1
 * Which will ignore the defaults, and use whatever you gave it
 
 **Input / Output** 
-* By default the **-SourceExtension** is set to **"*.mkv"** which will only add video files that have that the .mkv file extension
+* By default the **-SourceExtensions** is set to **"*.mkv"** which will only add video files that have that the .mkv file extension
 * By default the **-SourceIgnore** is set to **'MeGusta','x265','h265','Vault42'** which ignore any files which have any of those strings in its name from being processed
 * By default the **-DestinationFolder** is **blank**, which will default the encoded output file to be in the same folder as the source
 * By default the **-DestinationFile** is **blank**, which is only ever used when you have a single -Source file, and you want to redirect both the output folder and specify the output file name
