@@ -127,6 +127,8 @@ Remove Source Files - After each successful encode _(Only if the validation is 1
 * Note: If you try a local disk and the file size stays at 0KB because of File System caching, it will interfer with the Real-Time compression detection
 * By default the **-TranscodeFolderDelay** is **2**, works with -TranscodeFolder, and is the delay in seconds to wait after encoding for the file to finish writing, before any action is taken against it
 * By default the **-MoveOnSuccess** is **$true**, works with -TranscodeFolder and -RemoveSource, to allow for same name conflicts
+* By default the **-IncludeOnly** is **$false**, works with -IncludeOnlyString, add -IncludeOnly to make it true, when you want to filter source files based file name matches
+* By default the **-IncludeOnlyString** is **blank**, works with -IncludeOnly flag.  This accepts one or more 'strings' to filter -Source for to limit the scope of the search
 
 **Video Encoding Parameters**
 * By Default the **-Preset** is set to **"H.265 NVENC 1080p"**, which specifies the HandBrakeCLI default preset I use by default
@@ -192,6 +194,10 @@ Get-Jobs | Remove-Jobs -Force
 damburgey (aka StorageGuru)
 
 ## Version History
+
+* 0.9c
+	* Added -IncludeOnly
+	* Added -IncludeOnlyString 
 
 * 0.9b
 	* Added job queue average compression & space savings (GB) to progress bar

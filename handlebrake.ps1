@@ -4,6 +4,8 @@
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("se")][array] $SourceExtensions=@("*.mkv","*.mp4"), # Source file .extensions to include
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("ee")][array] $ExcludeExtensions=@(""), # Source file .extensions to exclude
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("si")][array] $SourceIgnore=@('MeGusta','x265','h265','Vault42'), # Source file EXCLUSIONs based on a search strings to filter out of the source file names
+    [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("io")][switch] $IncludeOnly=$false, # Use to enable the $IncludeOnlyString filter
+    [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("ios")][array] $IncludeOnlyStrings=@(), # Use to filter source folders/files and only add to queue if they match one part of the filename
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("dfi")][string] $DestinationFile,  # Use only when specifing a single source file, and you want to direct the exact file output path/name
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("dfo")][string] $DestinationFolder, # Use when you want to specify a different output folder than the source folder, but use the same file names
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("tf")][string] $TranscodeFolder, # Use when you want to specify a different output folder than the source folder, but use the same file names
@@ -24,7 +26,7 @@
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("rjl")][switch] $RemoveJobLogs=$true, # When $true, this will also delete the individual job and validation log files aftee being used
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("jf")][string] $JobFolder = $PSScriptRoot+"\", # Folder MUST exist, defaults to where ever the script is ran from
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("min")][int] $MinCompression="9", # Minimum compression value to accept
-    [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("max")][int] $MaxCompression="70", # Maximum compression value to accept
+    [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("max")][int] $MaxCompression="90", # Maximum compression value to accept
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("mon")][int] $MonitorCompression="20", # What % of the Encode Job to abort if compression isn't in the desired range
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("minb")][int] $MinBitrate="600", # Minimum Bitrate of source file to attemp to encode
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("maxb")][int] $MaxBitrate="99999", # Maximum Bitrate of source file to attemp to encode
@@ -33,13 +35,14 @@
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("sak")][string] $SonarrApiKey = ""  # Replace with your actual API key
 )
 
-# Version 0.9a
+# Version 0.9c
 
 # Reset Global Variables
 $c=0
 $jobsDetails=@()
 $QueueCR=0
 $QueueSS=0
+$IncludedFiles=@()
 
 # Function to send a POST request to Sonarr API
 function Invoke-SonarrCommand {
@@ -114,6 +117,18 @@ else {
 Write-Host -ForegroundColor Blue "Gathering Source file(s) from $Source"
 $sourcefiles = Get-ChildItem -Recurse -Path $Source -File -Include $SourceExtensions -Exclude $ExcludeExtensions | Sort-Object
 Write-Host -ForegroundColor Blue "Detected $($sourcefiles.count) Source Files "
+
+# Include Only handling
+if ($IncludeOnly -eq $true){
+    foreach ($includeString in $IncludeOnlyStrings){
+        $includeFile = $sourcefiles | Where-Object {
+            $_.Name -like "*$($includeString)*"
+        }
+        $IncludedFiles += $includeFile
+    }
+
+    $sourcefiles = $IncludedFiles
+}
 
 # Exclude from job queue anything specified in $SourceIgnore
 Write-Host -ForegroundColor Blue "Removing 'Ignored' Files from Queue"
@@ -490,11 +505,10 @@ foreach ($file in $files) {
     # Done with last encode job
     Write-Host -ForegroundColor Green "Converted: $($file.Name)"
     Write-Host -ForegroundColor Green "  to: $($outputFileName)"
-    Write-Host -ForegroundColor Green "  in: $executionTime"
-    Write-Host -ForegroundColor Green "  Average encode time is: $averageExecutionTime seconds"
+    Write-Host -ForegroundColor Green "  in: $([Math]::Round($executionTime, 2))"
+    #Write-Host -ForegroundColor Green "  Average encode time is: $([Math]::Round($averageExecutionTime, 2)) seconds"
     Write-Host -ForegroundColor Green "  Compressed: $([Math]::Round($CompleteCompressionRatio, 2)) %"
-    Write-Host -ForegroundColor Green "  Saving: $SpaceSaved GB"
-
+    Write-Host -ForegroundColor Green "  Saving: $([Math]::Round($SpaceSaved, 2)) GB"
 
     # Progress Bar
     Write-Progress -Id 2 -ParentId 0 -Activity 'Validation Process' -Status "Using HandBrakeCLI to validate the target video file" -CurrentOperation $outputFileName
