@@ -23,7 +23,7 @@ This script handles that, and much more :)
 * Scan the target video files for each job, and gather the metadata.
 * Compare the Source & Target metadata for validation on Video Stream, Duration, Audio & Subtitle track counts.
 * Remove the source file (if all validations are a success, when the -RemoveSource flag is provided)
-* Measure the average encoding job, and use that to update the Progress Bar with the ETA for the entire Queue
+* Measure the average encoding job duration, compression, space saved, and use that to update the Progress Bar with the ETA and metrics for the entire Queue
 * Integration with Sonarr, if the file is part of a monitored TV Series, force a rescan & rename after successful encode.  (If you have renaming enabled in Sonarr)'
 
 
