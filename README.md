@@ -26,6 +26,13 @@ This script handles that, and much more :)
 * Measure the average encoding job duration, compression %, space saved in GB, and use that to update the Progress Bar with the ETA and metrics for the entire Queue
 * Integration with Sonarr, if the file is part of a monitored TV Series, force a rescan & rename after successful encode.  (If you have renaming enabled in Sonarr)'
 
+**Future Features:**
+
+* Integration with Radarr
+* Integration with Plex
+* Add CPU encoding, and a switch to set preference between GPU & CPU
+* Failback to CPU encoding if GPU encoding can't achieve desired minimum compression
+
 
 **Note:**  Because HandBrakeCLI is 'noisy' and emits progress to stdout and log info to stderr.  All jobs run in a background, and are logged and monitored for success.  This allowed the main script session to be much cleaner and provide working progress bars.
 
