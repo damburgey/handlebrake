@@ -37,6 +37,8 @@
 # Reset Global Variables
 $c=0
 $jobsDetails=@()
+$QueueCR=0
+$QueueSS=0
 
 # Function to send a POST request to Sonarr API
 function Invoke-SonarrCommand {
@@ -109,7 +111,7 @@ else {
 
 # Get all video files in the source folder
 Write-Host -ForegroundColor Blue "Gathering Source file(s) from $Source"
-$sourcefiles = Get-ChildItem -Recurse -Path $Source -Include $SourceExtensionss | Sort-Object
+$sourcefiles = Get-ChildItem -Recurse -Path $Source -File -Include $SourceExtensions | Sort-Object
 Write-Host -ForegroundColor Blue "Detected $($sourcefiles.count) Source Files "
 
 # Exclude from job queue anything specified in $SourceIgnore
@@ -152,7 +154,9 @@ foreach ($file in $files) {
     $RequiredCompressionInvalid=$null
     $percentage=$null
     $CurrentCompressionRatio=$null
+    $CompleteCompressionRatio=$null
     $SkipLoop=$false
+    $SpaceSaved=$null
 
     # Get the current date and time in a specific format
     $dateTime = Get-Date -Format "yyyyMMdd_HHmmss"
@@ -177,7 +181,7 @@ foreach ($file in $files) {
     else {
         Write-Verbose "Job #: $c"
         $estimatedRemainingTime = $averageExecutionTime * ($filecount - $c)
-        Write-Progress -Id 0 -Activity 'Performing Video Transcoding' -Status "Processing Video File $($c) of $filecount" -CurrentOperation "$($file.Name)" -PercentComplete (($c/$filecount) * 100) -SecondsRemaining $estimatedRemainingTime
+        Write-Progress -Id 0 -Activity 'Performing Video Transcoding' -Status "Processing Video File $($c) of $filecount - Averaging: $([Math]::Round($TotalCR, 2))% - Saved: $([Math]::Round($QueueSS, 2)) GB" -CurrentOperation "$($file.Name)" -PercentComplete (($c/$filecount) * 100) -SecondsRemaining $estimatedRemainingTime
     }
 
     # Validate the Source file as a background job by scanning it with handbrake
@@ -476,11 +480,20 @@ foreach ($file in $files) {
     $executionTime = New-TimeSpan -Start $jobDetail.PSBeginTime -End $jobDetail.PSEndTime
     $averageExecutionTime = $executionTime.TotalSeconds
 
+    # Calculate the final compression ratio
+    $FinalSourceSize = (Get-Item -LiteralPath $file.FullName).Length
+    $FinalTargetSize = (Get-Item -LiteralPath $outputFileName).Length
+    $CompleteCompressionRatio = Get-CompressionRatio -sourceSize $FinalSourceSize -targetSize $FinalTargetSize -completionPercentage 100
+    $SpaceSaved = (((($FinalSourceSize - $FinalTargetSize)/1024)/1024)/1024)
+
     # Done with last encode job
-    Write-Host -ForegroundColor Green "Converted $($file.Name)"
-    Write-Host -ForegroundColor Green "  to $($outputFileName)"
-    Write-Host -ForegroundColor Green "  in $executionTime"
-    Write-Host -ForegroundColor Green " 6 Average encode time is: $averageExecutionTime seconds"
+    Write-Host -ForegroundColor Green "Converted: $($file.Name)"
+    Write-Host -ForegroundColor Green "  to: $($outputFileName)"
+    Write-Host -ForegroundColor Green "  in: $executionTime"
+    Write-Host -ForegroundColor Green "  Average encode time is: $averageExecutionTime seconds"
+    Write-Host -ForegroundColor Green "  Compressed: $([Math]::Round($CompleteCompressionRatio, 2)) %"
+    Write-Host -ForegroundColor Green "  Saving: $SpaceSaved GB"
+
 
     # Progress Bar
     Write-Progress -Id 2 -ParentId 0 -Activity 'Validation Process' -Status "Using HandBrakeCLI to validate the target video file" -CurrentOperation $outputFileName
@@ -626,21 +639,22 @@ foreach ($file in $files) {
     }
 
     # Validate compression ratio meets desired outcome
-    if ($CurrentCompressionRatio -ge $MinCompression -and $CurrentCompressionRatio -le $MaxCompression){
+    if ($CompleteCompressionRatio -ge $MinCompression -and $CompleteCompressionRatio -le $MaxCompression){
         $CompressionValid = $true
-        Write-Host -ForegroundColor Green "Target file has been compressed: $([Math]::Round($CurrentCompressionRatio, 2))%"
+        Write-Host -ForegroundColor Green "Target file has been compressed: $([Math]::Round($CompleteCompressionRatio, 2))%"
         Write-Verbose "Compression Ratio is acceptable!"
     }
-    elseif ($CurrentCompressionRatio -le $MinCompression) {
+    elseif ($CompleteCompressionRatio -le $MinCompression) {
         $CompressionValid = $false
-        Write-Host -ForegroundColor Red "Compression Ratio of: $([Math]::Round($CurrentCompressionRatio, 2))% is below the Minimum requested ratio of $MinCompression"
+        Write-Host -ForegroundColor Red "Compression Ratio of: $([Math]::Round($CompleteCompressionRatio, 2))% is below the Minimum requested ratio of $MinCompression"
     }
-    elseif ($CurrentCompressionRatio -ge $MaxCompression) {
+    elseif ($CompleteCompressionRatio -ge $MaxCompression) {
         $CompressionValid = $false
-        Write-Host -ForegroundColor Red "Compression Ratio of: $([Math]::Round($CurrentCompressionRatio, 2))% is above the Maximum requested ratio of $MaxCompression"
+        Write-Host -ForegroundColor Red "Compression Ratio of: $([Math]::Round($CompleteCompressionRatio, 2))% is above the Maximum requested ratio of $MaxCompression"
     }
     else {
         Write-Host -ForegroundColor Red "Compression Ratio couldn't be calculated..."
+        $CompressionValid = $false
     }
 
     # If all validations are successful, lets call it successful
@@ -808,6 +822,11 @@ foreach ($file in $files) {
         }
 
     } #/update Sonarr
+
+    # Complete Queue variables
+    $QueueCR += $CompleteCompressionRatio
+    $TotalCR = $QueueCR / $c
+    $QueueSS += $SpaceSaved
 
 } #/foreach
 

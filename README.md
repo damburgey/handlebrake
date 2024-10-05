@@ -187,9 +187,12 @@ damburgey (aka StorageGuru)
 
 ## Version History
 
+* 0.9b
+	* Added job queue average compression & space savings (GB) to progress bar
+
 * 0.9a
 	* Added -TranscodeFolderDelay with a default of 2 seconds, to wait after encode, before attempting to touch the file
-	* Cleaned up Encode Job console output & combined - Compression Ratio: % to the background job's direct handbrakecli output
+	* Cleaned up Encode Job console output & combined - Real-Time Compression Ratio: % to the background job's direct handbrakecli output
 	* Cleaned up / added commenting throughout script
 
 * 0.9
