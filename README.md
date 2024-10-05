@@ -107,7 +107,7 @@ Remove Source Files - After each successful encode _(Only if the validation is 1
 * Or alternatively you can provide your own values as needed when running the script by providing a "value" to any of the -parameters
 * Which will ignore the defaults, and use whatever you gave it
 
-**Input / Output** 
+**Input / Output Parameters** 
 * By default the **-SourceExtensions** is set to **"*.mkv"** which will only add video files that have that the .mkv file extension
 * By default the **-SourceIgnore** is set to **'MeGusta','x265','h265','Vault42'** which ignore any files which have any of those strings in its name from being processed, saves detection & skipping later
 * By default the **-DestinationFolder** is **blank**, which will default the encoded output file to be in the same folder as the source
@@ -161,7 +161,7 @@ Get-Job[0] | Format-List
 Get-Jobs | Remove-Jobs -Force
 ```
 
-**Sonar Integration Parameters**
+**Sonarr Integration Parameters**
 * By Default the **$UpdateSonarr** is **Blank**, update to $true to enable Sonarr Integration
 * By Default the **$sonarrBaseUrl** is **"http://localhost:8989/api/v3"**, update to your host address:port as required
 * By Default the **$SonarrApiKey** is **Blank**, update to your Sonarr API Key
