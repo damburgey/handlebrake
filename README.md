@@ -172,14 +172,12 @@ Get-Jobs | Remove-Jobs -Force
 ```
 
 **Recommended Parameters**
-* All folders must exist
 * -Verbose           Adds significant output to the console with all metadata and validation outputs
 * -RemoveSource      Remove the source file, after 100% validated successful encode
 * -TranscodeFolder   Encoded file is created in a temp location, and moved to the source folder after the original is removed (allows for same name encode jobs)
 ```
 .\handlebrake.ps1 -Source "Source Path" -Verbose -RemoveSource -TranscodeFolder "Z:\transcode\"
 ```
-
 
 ## Authors
 
