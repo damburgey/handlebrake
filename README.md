@@ -108,7 +108,8 @@ Remove Source Files - After each successful encode _(Only if the validation is 1
 * Which will ignore the defaults, and use whatever you gave it
 
 **Input / Output Parameters** 
-* By default the **-SourceExtensions** is set to **"*.mkv"** which will only add video files that have that the .mkv file extension
+* By default the **-SourceExtensions** is set to **"*.mkv","*.mp4"** which will only add video files that have that the .mkv file extension
+* By default the **-ExcludeExtensions** is set to **blank** which can be used to exclude any file extensions you may need
 * By default the **-SourceIgnore** is set to **'MeGusta','x265','h265','Vault42'** which ignore any files which have any of those strings in its name from being processed, saves detection & skipping later
 * By default the **-DestinationFolder** is **blank**, which will default the encoded output file to be in the same folder as the source
 * By default the **-DestinationFile** is **blank**, which is only ever used when you have a single -Source file, and you want to redirect both the output folder and specify the output file name
@@ -187,6 +188,7 @@ damburgey (aka StorageGuru)
 
 * 0.9b
 	* Added job queue average compression & space savings (GB) to progress bar
+	* Added -ExcludeExtensions for additional source file filtering options
 
 * 0.9a
 	* Added -TranscodeFolderDelay with a default of 2 seconds, to wait after encode, before attempting to touch the file

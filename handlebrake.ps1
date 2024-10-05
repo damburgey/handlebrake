@@ -2,6 +2,7 @@
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("hb")][string] $HandBrakeCLI="C:\Program Files\HandbrakeCLI\HandBrakeCLI.exe", # Set the path to HandBrakeCLI.exe
     [Parameter(Mandatory=$true,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("s")][string] $Source, # Specify either an individual file, or a folder containing many files
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("se")][array] $SourceExtensions=@("*.mkv","*.mp4"), # Source file .extensions to include
+    [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("ee")][array] $ExcludeExtensions=@(""), # Source file .extensions to exclude
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("si")][array] $SourceIgnore=@('MeGusta','x265','h265','Vault42'), # Source file EXCLUSIONs based on a search strings to filter out of the source file names
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("dfi")][string] $DestinationFile,  # Use only when specifing a single source file, and you want to direct the exact file output path/name
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("dfo")][string] $DestinationFolder, # Use when you want to specify a different output folder than the source folder, but use the same file names
@@ -16,7 +17,7 @@
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("at")][string] $ATracks="1,2,3,4,5,6,7,8,9,10,11,12", # Selects the first 12 available audio tracks, adjust as wanted
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("ac")][string] $ACmask="aac,ac3,eac3,truehd,dts,dtshd,mp2,mp3,flac,opus", # Specifies the types of Audio we will copy/passthru, Otherwise default failback is AAC 2 Channel
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("afb")][string] $AFailBack="av_aac", # Specify what audio codec to use, if we cant passthru the native audio
-    [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("sub")][string] $Subtitles="1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20", # Selects the first 20 subtitles to be included
+    [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("sub")][string] $Subtitles="1,2,3,4,5,6,7,8,9,10,11,12,13,14,15,16,17,18,19,20", # Selects the first 20 subtitles to be included, adjust as wanted
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("rs")][switch] $RemoveSource, # When used, this will delete the source file after a successful encode and validation on target file has occurred
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("rt")][switch] $RemoveTarget=$true, # When true, this will remove the target file if anything goes wrong.
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("dj")][switch] $DebugJobs=$true, # By default the script will remove all jobs once complete, change to =$false to manually debug or pull info from the jobs
@@ -111,7 +112,7 @@ else {
 
 # Get all video files in the source folder
 Write-Host -ForegroundColor Blue "Gathering Source file(s) from $Source"
-$sourcefiles = Get-ChildItem -Recurse -Path $Source -File -Include $SourceExtensions | Sort-Object
+$sourcefiles = Get-ChildItem -Recurse -Path $Source -File -Include $SourceExtensions -Exclude $ExcludeExtensions | Sort-Object
 Write-Host -ForegroundColor Blue "Detected $($sourcefiles.count) Source Files "
 
 # Exclude from job queue anything specified in $SourceIgnore
