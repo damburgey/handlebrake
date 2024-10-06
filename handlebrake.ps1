@@ -190,14 +190,14 @@ foreach ($file in $files) {
     if ($averageExecutionTime -eq $null){
         # Progress Bar and Status
         Write-Verbose "1st Run - Measuring Average Encode Time"
-        Write-Progress -Id 0 -Activity 'Performing Video Transcoding' -Status "Processing Video File $($c) of $filecount" -CurrentOperation "$($file.Name)" -PercentComplete (($c/$filecount) * 100)
+        Write-Progress -Id 0 -Activity 'Performing Video Transcoding' -Status "Processing Video File $($c) of $filecount" -CurrentOperation "    Source File: $($file.FullName)" -PercentComplete (($c/$filecount) * 100)
     }
     
     # Update progress bar with estimated time remaining
     else {
         Write-Verbose "Job #: $c"
         $estimatedRemainingTime = $averageExecutionTime * ($filecount - $c)
-        Write-Progress -Id 0 -Activity 'Performing Video Transcoding' -Status "Processing Video File $($c) of $filecount - Averaging: $([Math]::Round($TotalCR, 2))% - Saved: $([Math]::Round($QueueSS, 2)) GB" -CurrentOperation "$($file.Name)" -PercentComplete (($c/$filecount) * 100) -SecondsRemaining $estimatedRemainingTime
+        Write-Progress -Id 0 -Activity 'Performing Video Transcoding' -Status "Processing Video File $($c) of $filecount - Averaging: $([Math]::Round($TotalCR, 2))% - Saved: $([Math]::Round($QueueSS, 2))GB" -CurrentOperation "    Source File: $($file.FullName)" -PercentComplete (($c/$filecount) * 100) -SecondsRemaining $estimatedRemainingTime
     }
 
     # Validate the Source file as a background job by scanning it with handbrake
@@ -437,13 +437,13 @@ foreach ($file in $files) {
 
         # Progress Bar
         Write-Progress -Id 2 -ParentId 0 -Activity 'Encoding Process:' -Status "  Target File: $($outputFileName)"
-        Write-Progress -Id 3 -ParentId 2 -Activity 'Encoding Stats:' -Status "  Progress: $completionPercentage % - ETA: $eta - FPS: $avgFps -  Compression: $([Math]::Round($CurrentCompressionRatio, 2))%"
+        Write-Progress -Id 3 -ParentId 2 -Activity 'Encoding Stats:' -Status "  Progress: $($completionPercentage)% - ETA: $eta - FPS: $avgFps - Compression: $([Math]::Round($CurrentCompressionRatio, 2))%"
 
         ###
         ### Real-Time Compression monitor
         ###
         
-        # Ignore values below 10
+        # Ignore values below 10% complete, to allow for good data
         if ($completionPercentage -le 10){}
         
         # Check to see if our current compression % is tracking below our minimum required compression, based on a % of completion defined by $MonitorCompression
@@ -528,7 +528,7 @@ foreach ($file in $files) {
     Write-Host -ForegroundColor Green "  Saving: $([Math]::Round($SpaceSaved, 2)) GB"
 
     # Progress Bar
-    Write-Progress -Id 3 -ParentId 0 -Activity 'Validation Process' -Status "Using HandBrakeCLI to validate the target video file" -CurrentOperation $outputFileName
+    Write-Progress -Id 4 -ParentId 0 -Activity 'Validation Process' -Status "Using HandBrakeCLI to validate the target video file" -CurrentOperation $outputFileName
     
     # Validate the target file as a background job by scanning it with handbrake
     Write-Host -ForegroundColor Blue "Analyzing the target file outputFileName"
@@ -707,7 +707,7 @@ foreach ($file in $files) {
     }
 
     # Close out the Target Validation progress bar
-    Write-Progress -Id 3 -Activity 'Validation Process' -Status "Done" -Completed
+    Write-Progress -Id 4 -Activity 'Validation Process' -Status "Done" -Completed
 
     ###
     ### Determine if we are to delete the source file upon successful encode, or remove the target file upon failure
