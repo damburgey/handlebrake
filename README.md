@@ -99,6 +99,11 @@ Remove Source Files - After each successful encode _(Only if the validation is 1
 * Finally it will check that the compression ratio was acceptable. (Between the Min and Max compression values)
 * All of those must be true, in addition to sending the -RemoveSource parameter when executing the script for it to automatically remove the source video file(s)
 
+Include Only - An optional way to search for files across a large folder structure, and filter based on file names for source jobs to encode
+```
+.\handlebrake.ps1 -Source <Source Path> -IncludeOnly -IncludeOnlyString=@('SomeFiles','IwantTo','Encode')
+```
+Only files in the -Source , which have any of the values provided in their file name will be considered for the queue.
 
 ## Default Usage and Advanced Options
 
@@ -196,8 +201,8 @@ damburgey (aka StorageGuru)
 ## Version History
 
 * 0.9c
-	* Added -IncludeOnly
-	* Added -IncludeOnlyString 
+	* Added -IncludeOnly, defaults to false, add -IncludeOnly to enable
+	* Added -IncludeOnlyString (one or more values to filter file names by, to limit the scope of the queue to only requested values)
 
 * 0.9b
 	* Added job queue average compression & space savings (GB) to progress bar
