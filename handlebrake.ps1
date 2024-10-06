@@ -505,8 +505,8 @@ foreach ($file in $files) {
     # Done with last encode job
     Write-Host -ForegroundColor Green "Converted: $($file.Name)"
     Write-Host -ForegroundColor Green "  to: $($outputFileName)"
-    Write-Host -ForegroundColor Green "  in: $([Math]::Round($executionTime, 2))"
-    #Write-Host -ForegroundColor Green "  Average encode time is: $([Math]::Round($averageExecutionTime, 2)) seconds"
+    #Write-Host -ForegroundColor Green "  in: $([Math]::Round($executionTime, 2))"
+    Write-Host -ForegroundColor Green "  Average encode time is: $averageExecutionTime seconds"
     Write-Host -ForegroundColor Green "  Compressed: $([Math]::Round($CompleteCompressionRatio, 2)) %"
     Write-Host -ForegroundColor Green "  Saving: $([Math]::Round($SpaceSaved, 2)) GB"
 
