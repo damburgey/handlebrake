@@ -35,7 +35,7 @@
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("sak")][string] $SonarrApiKey = ""  # Replace with your actual API key
 )
 
-# Version 0.9c
+# Version 0.9d
 
 # Reset Global Variables
 $c=0
@@ -232,6 +232,7 @@ foreach ($file in $files) {
             Write-Host -ForegroundColor Yellow "Skipping: $($file.Name)"    
             Write-Host -ForegroundColor Yellow "Because it is already HEVC/x265/VP9"
             Write-Progress -Id 1 -ParentId 0 -Activity 'Validation Process' -Completed
+            $c--
             Continue # Exit the loop on this source file
         }
     }
@@ -247,6 +248,7 @@ foreach ($file in $files) {
             Write-Host -ForegroundColor Yellow "Skipping: $($file.Name)"    
             Write-Host -ForegroundColor Yellow "Because it's Bitrate of: $SourceVideoBitrate is below the requested minimum value of $MinBitrate"
             Write-Progress -Id 1 -ParentId 0 -Activity 'Validation Process' -Completed
+            $c--
             Continue # Exit the loop on this source file
         }
     }
@@ -351,6 +353,7 @@ foreach ($file in $files) {
         if (Test-Path $outputFileName){
             Write-Host -ForegroundColor Red "Output file already exists: $($outputFileName)"
             Write-Host -ForegroundColor Red "Skipping..."
+            $c--
             Continue 
         }
     }
@@ -476,6 +479,7 @@ foreach ($file in $files) {
     # Detect Skipped Item and continue to next file in queue
     if ($SkipLoop -eq $true){
         Write-Verbose "Finished cleaning up this failed job, proceeding with reamaining queue..." 
+        $c--
         Continue
     }
     

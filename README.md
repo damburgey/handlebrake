@@ -200,9 +200,10 @@ damburgey (aka StorageGuru)
 
 ## Version History
 
-* 0.9c
+* 0.9d
 	* Added -IncludeOnly, defaults to false, add -IncludeOnly to enable
 	* Added -IncludeOnlyString (one or more values to filter file names by, to limit the scope of the queue to only requested values)
+	* Fixed 'average compression' metric, by reducing the Job Queue # by 1, each time a file is skipped.
 
 * 0.9b
 	* Added job queue average compression & space savings (GB) to progress bar
