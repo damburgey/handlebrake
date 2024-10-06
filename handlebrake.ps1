@@ -35,7 +35,7 @@
     [Parameter(Mandatory=$false,ValueFromPipeLine=$true,ValueFromPipeLineByPropertyName=$true)] [alias("sak")][string] $SonarrApiKey = ""  # Replace with your actual API key
 )
 
-# Version 0.9d
+# Version 0.9e
 
 # Reset Global Variables
 $c=0
@@ -414,20 +414,30 @@ foreach ($file in $files) {
         $CurrentSourceSize = (Get-Item -LiteralPath $file.FullName).Length
         $CurrentTargetSize = (Get-Item -LiteralPath $outputFileName).Length
         
-        # Get the real-time percentage of completion (this needs to be connected to the actual compression job)
+        # Get the real-time percentage of completion
         $completionPercentage = [math]::Round($percentage)
 
         # Calculate the real-time compression ratio based on the current sizes and the completion percentage
         $CurrentCompressionRatio = Get-CompressionRatio -sourceSize $CurrentSourceSize -targetSize $CurrentTargetSize -completionPercentage $percentage
         
+        # Use regex to extract hours, minutes, and seconds
+        if ($eta -match '(?<hours>\d{2})h(?<minutes>\d{2})m(?<seconds>\d{2})s') {
+            $hours = [int]$matches.hours
+            $minutes = [int]$matches.minutes
+            $seconds = [int]$matches.seconds
+        }
+        
         # Output the results
         # Display the contents of the LastLine
-        
-        Write-Host "$LastLine - Compression Ratio: $([Math]::Round($CurrentCompressionRatio, 2))%"
+        # Write-Host "$LastLine - Compression Ratio: $([Math]::Round($CurrentCompressionRatio, 2))%"
         #"Source File Size: {0:N2} bytes" -f $CurrentSourceSize
         #"Target File Size: {0:N2} bytes" -f $CurrentTargetSize
         #"Completion Percentage: {0:N2}%" -f $completionPercentage
         #"Encoding: Compression Ratio: {0:N2}%" -f $CurrentCompressionRatio
+
+        # Progress Bar
+        Write-Progress -Id 2 -ParentId 0 -Activity 'Encoding Process:' -Status "  Target File: $($outputFileName)"
+        Write-Progress -Id 3 -ParentId 2 -Activity 'Encoding Stats:' -Status "  Progress: $completionPercentage % - ETA: $eta - FPS: $avgFps -  Compression: $([Math]::Round($CurrentCompressionRatio, 2))%"
 
         ###
         ### Real-Time Compression monitor
@@ -475,6 +485,9 @@ foreach ($file in $files) {
         } #/if
 
     } #/while monitoring encode job
+
+    Write-Progress -Id 2 -ParentId 0 -Activity 'Encoding Process:' -Status "Done" -Completed
+    Write-Progress -Id 3 -ParentId 2 -Activity 'Encoding Stats:' -Status "Done" -Completed
     
     # Detect Skipped Item and continue to next file in queue
     if ($SkipLoop -eq $true){
@@ -515,7 +528,7 @@ foreach ($file in $files) {
     Write-Host -ForegroundColor Green "  Saving: $([Math]::Round($SpaceSaved, 2)) GB"
 
     # Progress Bar
-    Write-Progress -Id 2 -ParentId 0 -Activity 'Validation Process' -Status "Using HandBrakeCLI to validate the target video file" -CurrentOperation $outputFileName
+    Write-Progress -Id 3 -ParentId 0 -Activity 'Validation Process' -Status "Using HandBrakeCLI to validate the target video file" -CurrentOperation $outputFileName
     
     # Validate the target file as a background job by scanning it with handbrake
     Write-Host -ForegroundColor Blue "Analyzing the target file outputFileName"
@@ -694,7 +707,7 @@ foreach ($file in $files) {
     }
 
     # Close out the Target Validation progress bar
-    Write-Progress -Id 2 -Activity 'Validation Process' -Status "Done" -Completed
+    Write-Progress -Id 3 -Activity 'Validation Process' -Status "Done" -Completed
 
     ###
     ### Determine if we are to delete the source file upon successful encode, or remove the target file upon failure

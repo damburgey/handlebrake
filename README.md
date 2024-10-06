@@ -200,6 +200,9 @@ damburgey (aka StorageGuru)
 
 ## Version History
 
+* 0.9e
+	* Moved all Job console encoding output from console to Progress bar
+
 * 0.9d
 	* Added -IncludeOnly, defaults to false, add -IncludeOnly to enable
 	* Added -IncludeOnlyString (one or more values to filter file names by, to limit the scope of the queue to only requested values)
